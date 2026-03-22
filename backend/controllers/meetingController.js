@@ -2,19 +2,21 @@ import { db } from '../db/index.js';
 import { meetings, guests, availabilities } from '../db/schema.js';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
+import { users } from '../db/schema.js';
+import { sendMeetingConfirmation } from '../utils/email.js';
 
 export const createMeeting = async (req, res) => {
   try {
     const { title, description, durationMinutes, proposedDates } = req.body;
-    const guestSlug = nanoid(10);
-    const adminSlug = nanoid(10);
+    const hostId = req.user.id; 
+    const guestSlug = nanoid(10); 
     const newMeeting = await db.insert(meetings).values({
+      hostId,
       title,
       description,
       durationMinutes,
       proposedDates,
       guestSlug,
-      adminSlug,
       status: 'PENDING'
     }).returning();
 
@@ -22,8 +24,8 @@ export const createMeeting = async (req, res) => {
       message: "Meeting created successfully",
       meeting: newMeeting[0],
       links: {
-        guestLink: `/m/${guestSlug}`,
-        adminLink: `/dashboard/${adminSlug}` 
+        guestLink: `/m/${guestSlug}`, 
+        adminLink: `/dashboard/${newMeeting[0].id}` 
       }
     });
 
@@ -86,11 +88,15 @@ export const submitGuestVote = async (req, res) => {
 // 3. Fetch all data for the Admin Dashboard Heatmap
 export const getDashboardData = async (req, res) => {
   try {
-    const { adminSlug } = req.params;
-    const meetingResult = await db.select().from(meetings).where(eq(meetings.adminSlug, adminSlug));
-    if (meetingResult.length === 0) {
-      return res.status(404).json({ error: "Admin dashboard not found or link is invalid." });
+    const { meetingId } = req.params; 
+    const hostId = req.user.id;
+    const meetingResult = await db.select().from(meetings)
+      .where(eq(meetings.id, meetingId));
+
+    if (meetingResult.length === 0 || meetingResult[0].hostId !== hostId) {
+      return res.status(403).json({ error: "Unauthorized or meeting not found." });
     }
+    
     const meeting = meetingResult[0];
     const meetingGuests = await db.select().from(guests).where(eq(guests.meetingId, meeting.id));
     const meetingAvailabilities = await db.select().from(availabilities).where(eq(availabilities.meetingId, meeting.id));
@@ -100,10 +106,7 @@ export const getDashboardData = async (req, res) => {
         availabilities: meetingAvailabilities.filter(a => a.guestId === guest.id)
       };
     });
-    res.status(200).json({
-      meeting,
-      guests: guestsWithTimes
-    });
+    res.status(200).json({ meeting, guests: guestsWithTimes });
   } catch (error) {
     console.error("Error fetching dashboard:", error);
     res.status(500).json({ error: "Failed to load dashboard data" });
@@ -113,22 +116,31 @@ export const getDashboardData = async (req, res) => {
 // 4. Host confirms the final meeting time
 export const confirmMeeting = async (req, res) => {
   try {
-    const { adminSlug } = req.params;
+    const { meetingId } = req.params;
     const { finalStartTime, finalEndTime } = req.body;
-    const updatedMeeting = await db.update(meetings)
+    const hostId = req.user.id; 
+    const meetingResult = await db.select().from(meetings).where(eq(meetings.id, meetingId));
+    if (meetingResult.length === 0 || meetingResult[0].hostId !== hostId) {
+      return res.status(403).json({ error: "Unauthorized or meeting not found." });
+    }
+    const updatedMeetingResult = await db.update(meetings)
       .set({ 
         status: 'CONFIRMED', 
         finalStartTime: new Date(finalStartTime), 
         finalEndTime: new Date(finalEndTime) 
       })
-      .where(eq(meetings.adminSlug, adminSlug))
+      .where(eq(meetings.id, meetingId))
       .returning();
-    if (updatedMeeting.length === 0) {
-      return res.status(404).json({ error: "Meeting not found." });
-    }
+
+    const confirmedMeeting = updatedMeetingResult[0];
+    const hostResult = await db.select().from(users).where(eq(users.id, hostId));
+    const host = hostResult[0];
+    const meetingGuests = await db.select().from(guests).where(eq(guests.meetingId, meetingId));
+
+    sendMeetingConfirmation(confirmedMeeting, host, meetingGuests);
     res.status(200).json({ 
       message: "Meeting officially confirmed!", 
-      meeting: updatedMeeting[0] 
+      meeting: confirmedMeeting 
     });
   } catch (error) {
     console.error("Error confirming meeting:", error);

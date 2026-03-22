@@ -1,13 +1,23 @@
 import { pgTable, text, timestamp, integer, uuid, jsonb } from "drizzle-orm/pg-core";
 
-// 1. The Meetings Table
+// 1. Users Table
+export const users = pgTable("users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  googleId: text("google_id").notNull().unique(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  picture: text("picture"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 2. Meetings Table
 export const meetings = pgTable("meetings", {
   id: uuid("id").defaultRandom().primaryKey(),
+  hostId: uuid("host_id").references(() => users.id, { onDelete: 'cascade' }).notNull(), // <-- NEW: Links meeting to host
   title: text("title").notNull(),
   description: text("description"),
   durationMinutes: integer("duration_minutes").notNull(), 
-  guestSlug: text("guest_slug").notNull().unique(),
-  adminSlug: text("admin_slug").notNull().unique(),
+  guestSlug: text("guest_slug").notNull().unique(), 
   proposedDates: jsonb("proposed_dates").notNull(), 
   status: text("status").default("PENDING").notNull(), 
   finalStartTime: timestamp("final_start_time", { withTimezone: true }),
@@ -15,7 +25,7 @@ export const meetings = pgTable("meetings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// 2. The Guests Table
+// 3. The Guests Table
 export const guests = pgTable("guests", {
   id: uuid("id").defaultRandom().primaryKey(),
   meetingId: uuid("meeting_id").references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
@@ -24,7 +34,7 @@ export const guests = pgTable("guests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// 3. The Availabilities Table
+// 4. The Availabilities Table
 export const availabilities = pgTable("availabilities", {
   id: uuid("id").defaultRandom().primaryKey(),
   guestId: uuid("guest_id").references(() => guests.id, { onDelete: 'cascade' }).notNull(),

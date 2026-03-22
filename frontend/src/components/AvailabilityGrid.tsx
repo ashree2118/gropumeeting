@@ -1,16 +1,18 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { format, parse } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, RotateCcw } from "lucide-react";
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const DEFAULT_DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const START_HOUR = 8;
 const END_HOUR = 18;
 const SLOTS_PER_HOUR = 2;
-const TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;
+const SLOT_MINUTES = 30;
+export const GRID_TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;
 
 function formatTime(slotIndex: number) {
-  const totalMinutes = (START_HOUR * 60) + slotIndex * 30;
+  const totalMinutes = START_HOUR * 60 + slotIndex * SLOT_MINUTES;
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
   const ampm = h >= 12 ? "PM" : "AM";
@@ -18,15 +20,81 @@ function formatTime(slotIndex: number) {
   return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
+export type AvailabilitySlot = { startTime: string; endTime: string };
+
 type CellKey = `${number}-${number}`;
 
-const AvailabilityGrid = () => {
+function selectedCellsToAvailabilities(
+  selected: Set<CellKey>,
+  proposedDates: string[]
+): AvailabilitySlot[] {
+  const slotMs = SLOT_MINUTES * 60 * 1000;
+  const slots: { start: Date; end: Date }[] = [];
+  selected.forEach((key) => {
+    const [dayStr, slotStr] = key.split("-");
+    const dayIdx = Number(dayStr);
+    const slotIdx = Number(slotStr);
+    const dateStr = proposedDates[dayIdx];
+    if (!dateStr) return;
+    const [y, mo, d] = dateStr.split("-").map(Number);
+    const start = new Date(y, mo - 1, d, START_HOUR, 0, 0, 0);
+    start.setMinutes(start.getMinutes() + slotIdx * SLOT_MINUTES);
+    const end = new Date(start.getTime() + slotMs);
+    slots.push({ start, end });
+  });
+  slots.sort((a, b) => a.start.getTime() - b.start.getTime());
+  const merged: { start: Date; end: Date }[] = [];
+  for (const s of slots) {
+    const last = merged[merged.length - 1];
+    if (last && last.end.getTime() === s.start.getTime()) {
+      last.end = s.end;
+    } else {
+      merged.push({ start: s.start, end: s.end });
+    }
+  }
+  return merged.map((x) => ({
+    startTime: x.start.toISOString(),
+    endTime: x.end.toISOString(),
+  }));
+}
+
+export interface AvailabilityGridProps {
+  /** When set, columns match these calendar dates (`yyyy-MM-dd`); otherwise Mon–Fri placeholders. */
+  proposedDates?: string[];
+  onAvailabilitiesChange?: (availabilities: AvailabilitySlot[]) => void;
+  /** Hide the built-in submit row (e.g. when parent provides the submit button). */
+  showFooterSubmit?: boolean;
+}
+
+const AvailabilityGrid = ({
+  proposedDates,
+  onAvailabilitiesChange,
+  showFooterSubmit = true,
+}: AvailabilityGridProps = {}) => {
   const [selected, setSelected] = useState<Set<CellKey>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState<"add" | "remove">("add");
   const [dragStart, setDragStart] = useState<{ day: number; slot: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ day: number; slot: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  const columnLabels = useMemo(() => {
+    if (proposedDates?.length) {
+      return proposedDates.map((d) =>
+        format(parse(d, "yyyy-MM-dd", new Date()), "EEE MMM d")
+      );
+    }
+    return DEFAULT_DAY_LABELS;
+  }, [proposedDates]);
+
+  const numDays = proposedDates?.length ? proposedDates.length : DEFAULT_DAY_LABELS.length;
+
+  const gridTemplateColumns = `60px repeat(${numDays}, minmax(0, 1fr))`;
+
+  useEffect(() => {
+    if (!onAvailabilitiesChange || !proposedDates?.length) return;
+    onAvailabilitiesChange(selectedCellsToAvailabilities(selected, proposedDates));
+  }, [selected, proposedDates, onAvailabilitiesChange]);
 
   const getDragRange = useCallback(() => {
     if (!dragStart || !dragCurrent) return new Set<CellKey>();
@@ -120,41 +188,38 @@ const AvailabilityGrid = () => {
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >
-          {/* Header row */}
-          <div className="grid grid-cols-[60px_repeat(5,1fr)] gap-px mb-px">
+          <div
+            className="grid gap-px mb-px"
+            style={{ gridTemplateColumns }}
+          >
             <div className="h-10" />
-            {DAYS.map((day) => (
+            {columnLabels.map((label, i) => (
               <div
-                key={day}
-                className="h-10 flex items-center justify-center text-sm font-semibold text-foreground"
+                key={`col-${i}`}
+                className="h-10 flex items-center justify-center text-center px-1 text-xs font-semibold text-foreground sm:text-sm"
               >
-                {day}
+                {label}
               </div>
             ))}
           </div>
 
-          {/* Time grid */}
-          <div className="grid grid-cols-[60px_repeat(5,1fr)] gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60">
-            {Array.from({ length: TOTAL_SLOTS }, (_, slotIdx) => (
-              <>
-                {/* Time label */}
-                <div
-                  key={`time-${slotIdx}`}
-                  className="bg-background flex items-start justify-end pr-2 pt-0.5"
-                >
+          <div
+            className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60"
+            style={{ gridTemplateColumns }}
+          >
+            {Array.from({ length: GRID_TOTAL_SLOTS }, (_, slotIdx) => (
+              <div key={`slot-row-${slotIdx}`} className="contents">
+                <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
                   {slotIdx % SLOTS_PER_HOUR === 0 && (
                     <span className="text-[11px] text-muted-foreground font-medium">
                       {formatTime(slotIdx)}
                     </span>
                   )}
                 </div>
-
-                {/* Day cells */}
-                {DAYS.map((_, dayIdx) => {
+                {Array.from({ length: numDays }, (_, dayIdx) => {
                   const active = isCellActive(dayIdx, slotIdx);
                   const preview = isCellPreview(dayIdx, slotIdx);
                   const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
-
                   return (
                     <div
                       key={`${dayIdx}-${slotIdx}`}
@@ -174,7 +239,7 @@ const AvailabilityGrid = () => {
                     />
                   );
                 })}
-              </>
+              </div>
             ))}
           </div>
 
@@ -190,11 +255,13 @@ const AvailabilityGrid = () => {
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <Button size="lg" disabled={selected.size === 0}>
-            Submit Availability
-          </Button>
-        </div>
+        {showFooterSubmit && (
+          <div className="mt-6 flex justify-end">
+            <Button size="lg" disabled={selected.size === 0}>
+              Submit Availability
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

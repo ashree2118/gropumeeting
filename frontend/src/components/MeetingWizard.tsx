@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -29,11 +29,13 @@ import {
   Copy,
   ExternalLink,
   LayoutDashboard,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useMeetingStore } from "@/store/useMeetingStore";
 
 // ---------- State shape (Zustand-ready) ----------
 export interface MeetingFormState {
@@ -65,15 +67,21 @@ const DURATIONS = [
   { value: "120", label: "2 hours" },
 ];
 
-function generateMeetingId() {
-  return Math.random().toString(36).substring(2, 8);
-}
-
 const MeetingWizard = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formState, setFormState] = useState<MeetingFormState>(initialState);
-  const [meetingId] = useState(() => generateMeetingId());
+  const setBasicInfo = useMeetingStore((s) => s.setBasicInfo);
+  const setDates = useMeetingStore((s) => s.setDates);
+  const submitMeeting = useMeetingStore((s) => s.submitMeeting);
+  const guestLink = useMeetingStore((s) => s.guestLink);
+  const adminLink = useMeetingStore((s) => s.adminLink);
+  const isLoading = useMeetingStore((s) => s.isLoading);
+  const resetStore = useMeetingStore((s) => s.resetStore);
+
+  useEffect(() => {
+    resetStore();
+  }, [resetStore]);
 
   const updateField = <K extends keyof MeetingFormState>(
     key: K,
@@ -92,9 +100,12 @@ const MeetingWizard = () => {
     return true;
   };
 
-  const shareableLink = `${window.location.origin}/m/${meetingId}`;
+  const shareableLink = guestLink
+    ? `${window.location.origin}${guestLink}`
+    : "";
 
   const copyLink = () => {
+    if (!shareableLink) return;
     navigator.clipboard.writeText(shareableLink);
     toast.success("Link copied to clipboard!");
   };
@@ -298,7 +309,8 @@ const MeetingWizard = () => {
               <Button
                 variant="outline"
                 className="w-full gap-2"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => adminLink && navigate(adminLink)}
+                disabled={!adminLink}
               >
                 <LayoutDashboard className="h-4 w-4" />
                 Go to Dashboard
@@ -319,13 +331,47 @@ const MeetingWizard = () => {
                 Back
               </Button>
               <Button
-                onClick={() => setStep((s) => s + 1)}
-                disabled={!canProceed()}
+                onClick={async () => {
+                  if (step === 1) {
+                    setBasicInfo(
+                      formState.title.trim(),
+                      formState.description,
+                      Number.parseInt(formState.duration, 10) || 30
+                    );
+                    setStep(2);
+                    return;
+                  }
+                  if (step === 2) {
+                    setDates(
+                      formState.proposedDates.map((d) =>
+                        format(d, "yyyy-MM-dd")
+                      )
+                    );
+                    const ok = await submitMeeting();
+                    if (!ok) {
+                      toast.error(
+                        useMeetingStore.getState().error ??
+                          "Failed to create meeting"
+                      );
+                      return;
+                    }
+                    setStep(3);
+                  }
+                }}
+                disabled={!canProceed() || isLoading}
                 className="gap-1"
               >
-                {step === 2 ? "Create Meeting" : "Next"}
+                {step === 2
+                  ? isLoading
+                    ? "Creating..."
+                    : "Create Meeting"
+                  : "Next"}
                 {step === 2 ? (
-                  <Check className="h-4 w-4" />
+                  isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )
                 ) : (
                   <ArrowRight className="h-4 w-4" />
                 )}

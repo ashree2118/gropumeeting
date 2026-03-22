@@ -1,23 +1,28 @@
 import { Router } from 'express';
 import { validateData } from '../middlewares/validateData.js';
-import { createMeetingSchema, submitVoteSchema, confirmMeetingSchema } from '../schemas/zodSchema.js'; 
+import { requireAuth } from '../middlewares/requireAuth.js';
+import {
+  createMeetingSchema,
+  submitVoteSchema,
+  confirmMeetingSchema,
+} from '../schemas/zodSchema.js';
 import * as meetingController from '../controllers/meetingController.js';
+import * as authController from '../controllers/authController.js'; 
 
 const router = Router();
 
-// HOST: Create a new meeting
-router.post('/meetings', validateData(createMeetingSchema), meetingController.createMeeting);
+//AUTH ROUTE
+router.post('/auth/google', authController.googleLogin);
 
-// GUEST: Load the meeting data using the slug
-router.get('/meetings/:guestSlug', meetingController.getMeetingForGuest);
+//HOST ROUTES (PROTECTED)
+router.post('/meetings', requireAuth, validateData(createMeetingSchema), meetingController.createMeeting);
 
-// GUEST: Submit available times
-router.post('/meetings/:guestSlug/vote', validateData(submitVoteSchema), meetingController.submitGuestVote);
+router.get('/meetings/admin/:meetingId', requireAuth, meetingController.getDashboardData);
+router.post('/meetings/:meetingId/confirm', requireAuth, validateData(confirmMeetingSchema), meetingController.confirmMeeting);
+router.post('/meetings/admin/:meetingId/confirm', requireAuth, validateData(confirmMeetingSchema), meetingController.confirmMeeting);
 
-// ADMIN: Get all data for the heatmap dashboard  <-- NEW
-router.get('/meetings/admin/:adminSlug', meetingController.getDashboardData);
-
-// ADMIN: Confirm the final time <-- NEW
-router.post('/meetings/admin/:adminSlug/confirm', validateData(confirmMeetingSchema), meetingController.confirmMeeting);
+//GUEST ROUTES (PUBLIC)
+router.get('/meetings/guest/:guestSlug', meetingController.getMeetingForGuest);
+router.post('/meetings/guest/:guestSlug/vote', validateData(submitVoteSchema), meetingController.submitGuestVote);
 
 export default router;
