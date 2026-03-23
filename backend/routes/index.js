@@ -16,7 +16,7 @@ router.post('/auth/google', authController.googleLogin);
 
 //HOST ROUTES (PROTECTED)
 router.post('/meetings', requireAuth, validateData(createMeetingSchema), meetingController.createMeeting);
-
+router.get('/meetings/mine', requireAuth, meetingController.getAllHostMeetings);
 router.get('/meetings/admin/:meetingId', requireAuth, meetingController.getDashboardData);
 router.post('/meetings/:meetingId/confirm', requireAuth, validateData(confirmMeetingSchema), meetingController.confirmMeeting);
 router.post('/meetings/admin/:meetingId/confirm', requireAuth, validateData(confirmMeetingSchema), meetingController.confirmMeeting);

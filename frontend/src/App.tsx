@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
+import MeetingDashboard from "./pages/MeetingDashboard";
+import GlobalDashboard from "./pages/GlobalDashboard";
 import CreateMeeting from "./pages/CreateMeeting";
 import NotFound from "./pages/NotFound";
 import GuestVote from "./pages/GuestVote";
@@ -22,8 +23,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/m/:guestSlug" element={<GuestVote />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard/:adminSlug" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/meeting/:meetingId" element={<MeetingDashboard />} />
+            <Route path="/dashboard" element={<GlobalDashboard />} />
             <Route path="/create" element={<CreateMeeting />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { meetings, guests, availabilities } from '../db/schema.js';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { users } from '../db/schema.js';
 import { sendMeetingConfirmation } from '../utils/email.js';
 
@@ -39,11 +39,34 @@ export const createMeeting = async (req, res) => {
 export const getMeetingForGuest = async (req, res) => {
   try {
     const { guestSlug } = req.params;
+    const { guestId } = req.query;
     const meetingResult = await db.select().from(meetings).where(eq(meetings.guestSlug, guestSlug));
     if (meetingResult.length === 0) {
       return res.status(404).json({ error: "Meeting not found or link is invalid." });
     }
-    res.status(200).json(meetingResult[0]);
+    const meeting = meetingResult[0];
+
+    // If a guestId is provided, fetch that guest's existing data
+    if (guestId) {
+      const guestResult = await db.select().from(guests)
+        .where(and(eq(guests.id, guestId), eq(guests.meetingId, meeting.id)));
+      if (guestResult.length > 0) {
+        const guest = guestResult[0];
+        const guestAvailabilities = await db.select().from(availabilities)
+          .where(eq(availabilities.guestId, guest.id));
+        return res.status(200).json({
+          ...meeting,
+          guest: {
+            id: guest.id,
+            name: guest.name,
+            email: guest.email,
+            availabilities: guestAvailabilities
+          }
+        });
+      }
+    }
+
+    res.status(200).json(meeting);
   } catch (error) {
     console.error("Error fetching meeting:", error);
     res.status(500).json({ error: "Failed to fetch meeting details" });
@@ -54,7 +77,7 @@ export const getMeetingForGuest = async (req, res) => {
 export const submitGuestVote = async (req, res) => {
   try {
     const { guestSlug } = req.params;
-    const { name, email, availabilities: guestTimes } = req.body;
+    const { name, email, availabilities: guestTimes, guestId } = req.body;
     const meetingResult = await db.select().from(meetings).where(eq(meetings.guestSlug, guestSlug));
     if (meetingResult.length === 0) {
       return res.status(404).json({ error: "Meeting not found." });
@@ -64,21 +87,42 @@ export const submitGuestVote = async (req, res) => {
     if (meeting.status === 'CONFIRMED') {
       return res.status(400).json({ error: "This meeting has already been finalized." });
     }
-    const newGuest = await db.insert(guests).values({
-      meetingId: meeting.id,
-      name,
-      email
-    }).returning();
-    const guestId = newGuest[0].id;
+
+    let currentGuestId = guestId;
+
+    if (currentGuestId) {
+      // Verify the guest belongs to this meeting
+      const existingGuest = await db.select().from(guests)
+        .where(and(eq(guests.id, currentGuestId), eq(guests.meetingId, meeting.id)));
+      if (existingGuest.length === 0) {
+        return res.status(400).json({ error: "Guest not found for this meeting." });
+      }
+      // Update guest info
+      await db.update(guests)
+        .set({ name, email })
+        .where(eq(guests.id, currentGuestId));
+      // Delete old availabilities
+      await db.delete(availabilities)
+        .where(eq(availabilities.guestId, currentGuestId));
+    } else {
+      // Insert new guest
+      const newGuest = await db.insert(guests).values({
+        meetingId: meeting.id,
+        name,
+        email
+      }).returning();
+      currentGuestId = newGuest[0].id;
+    }
+
     const timeBlocksToInsert = guestTimes.map(time => ({
-      guestId,
+      guestId: currentGuestId,
       meetingId: meeting.id,
       startTime: new Date(time.startTime),
       endTime: new Date(time.endTime)
     }));
 
     await db.insert(availabilities).values(timeBlocksToInsert);
-    res.status(201).json({ message: "Availability submitted successfully!" });
+    res.status(200).json({ message: "Availability submitted successfully!", guestId: currentGuestId });
   } catch (error) {
     console.error("Error submitting vote:", error);
     res.status(500).json({ error: "Failed to submit availability" });
@@ -145,5 +189,20 @@ export const confirmMeeting = async (req, res) => {
   } catch (error) {
     console.error("Error confirming meeting:", error);
     res.status(500).json({ error: "Failed to confirm meeting" });
+  }
+};
+
+// 5. Fetch all meetings for the logged-in host
+export const getAllHostMeetings = async (req, res) => {
+  try {
+    const hostId = req.user.id;
+    const userMeetings = await db.select()
+      .from(meetings)
+      .where(eq(meetings.hostId, hostId))
+      .orderBy(desc(meetings.createdAt)); 
+    res.status(200).json(userMeetings);
+  } catch (error) {
+    console.error("Error fetching all meetings:", error);
+    res.status(500).json({ error: "Failed to load your meetings" });
   }
 };

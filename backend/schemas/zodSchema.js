@@ -10,6 +10,7 @@ export const createMeetingSchema = z.object({
 export const submitVoteSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email").optional().or(z.literal('')), 
+  guestId: z.string().uuid().optional(),
   availabilities: z.array(
     z.object({
       startTime: z.string().datetime(), // Ensures it's a valid ISO 8601 timestamp

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, CalendarCheck, PartyPopper } from "lucide-react";
@@ -17,6 +17,38 @@ import {
 } from "@/components/ui/card";
 import { getMeeting, submitVote, type MeetingForGuest } from "@/lib/api";
 
+const START_HOUR = 0;
+const SLOT_MINUTES = 30;
+
+/** Build a Set<"dayIdx-slotIdx"> from ISO availability records + proposedDates */
+function availabilitiesToCellKeys(
+  avails: { startTime: string; endTime: string }[],
+  proposedDates: string[]
+): Set<string> {
+  const keys = new Set<string>();
+  for (const a of avails) {
+    const start = new Date(a.startTime);
+    const end = new Date(a.endTime);
+    // Find which day column this belongs to
+    const dateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+    const dayIdx = proposedDates.indexOf(dateStr);
+    if (dayIdx === -1) continue;
+    // Walk through the 30-min slots covered by this availability
+    let cursor = new Date(start);
+    while (cursor < end) {
+      const minutesSinceMidnight = cursor.getHours() * 60 + cursor.getMinutes();
+      const slotIdx = Math.floor((minutesSinceMidnight - START_HOUR * 60) / SLOT_MINUTES);
+      keys.add(`${dayIdx}-${slotIdx}`);
+      cursor = new Date(cursor.getTime() + SLOT_MINUTES * 60 * 1000);
+    }
+  }
+  return keys;
+}
+
+function localStorageKey(guestSlug: string) {
+  return `gropumeeting_guest_${guestSlug}`;
+}
+
 const GuestVote = () => {
   const { guestSlug } = useParams<{ guestSlug: string }>();
   const [loadingMeeting, setLoadingMeeting] = useState(true);
@@ -28,6 +60,11 @@ const GuestVote = () => {
   const [availabilities, setAvailabilities] = useState<AvailabilitySlot[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const [existingGuestId, setExistingGuestId] = useState<string | null>(null);
+  const [initialSelected, setInitialSelected] = useState<Set<string> | undefined>(undefined);
+
+  const isEditing = !!existingGuestId;
 
   const onAvailabilitiesChange = useCallback((slots: AvailabilitySlot[]) => {
     setAvailabilities(slots);
@@ -42,11 +79,26 @@ const GuestVote = () => {
     let cancelled = false;
     setLoadingMeeting(true);
     setFetchFailed(false);
+
+    // Check localStorage for an existing guestId
+    const storedGuestId = localStorage.getItem(localStorageKey(guestSlug)) ?? undefined;
+
     (async () => {
       try {
-        const m = await getMeeting(guestSlug);
+        const m = await getMeeting(guestSlug, storedGuestId);
         if (!cancelled) {
           setMeeting(m);
+          // If server returned guest data, pre-populate
+          if (m.guest) {
+            setExistingGuestId(m.guest.id);
+            setName(m.guest.name);
+            setEmail(m.guest.email ?? "");
+            if (m.proposedDates?.length && m.guest.availabilities?.length) {
+              setInitialSelected(
+                availabilitiesToCellKeys(m.guest.availabilities, m.proposedDates)
+              );
+            }
+          }
         }
       } catch {
         if (!cancelled) {
@@ -66,11 +118,17 @@ const GuestVote = () => {
     if (!guestSlug || !name.trim()) return;
     setSubmitting(true);
     try {
-      await submitVote(guestSlug, {
+      const result = await submitVote(guestSlug, {
         name: name.trim(),
         email: email.trim() || undefined,
+        guestId: existingGuestId ?? undefined,
         availabilities,
       });
+      // Persist guestId for future edits
+      if (result.guestId) {
+        localStorage.setItem(localStorageKey(guestSlug), result.guestId);
+        setExistingGuestId(result.guestId);
+      }
       setSuccess(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to submit availability");
@@ -78,6 +136,12 @@ const GuestVote = () => {
       setSubmitting(false);
     }
   };
+
+  // Unique key to force AvailabilityGrid remount when initialSelected changes
+  const gridKey = useMemo(
+    () => (initialSelected ? `edit-${initialSelected.size}` : "new"),
+    [initialSelected]
+  );
 
   if (loadingMeeting) {
     return (
@@ -114,7 +178,7 @@ const GuestVote = () => {
               <PartyPopper className="h-8 w-8 text-primary" />
             </div>
             <CardTitle className="text-2xl font-semibold tracking-tight">
-              Thanks for voting!
+              {isEditing ? "Availability Updated!" : "Thanks for voting!"}
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
               Your availability has been sent to the host.
@@ -166,7 +230,9 @@ const GuestVote = () => {
               <CardHeader>
                 <CardTitle className="text-lg">Your details</CardTitle>
                 <CardDescription>
-                  Add your name so the host knows who submitted availability.
+                  {isEditing
+                    ? "Update your name or email if needed."
+                    : "Add your name so the host knows who submitted availability."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -196,9 +262,11 @@ const GuestVote = () => {
             </Card>
 
             <AvailabilityGrid
+              key={gridKey}
               proposedDates={meeting.proposedDates}
               onAvailabilitiesChange={onAvailabilitiesChange}
               showFooterSubmit={false}
+              initialSelected={initialSelected}
             />
 
             <div className="flex justify-center sm:justify-end">
@@ -211,8 +279,10 @@ const GuestVote = () => {
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting…
+                    {isEditing ? "Updating…" : "Submitting…"}
                   </>
+                ) : isEditing ? (
+                  "Update Availability"
                 ) : (
                   "Submit Availability"
                 )}

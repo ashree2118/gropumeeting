@@ -4,15 +4,15 @@ import { Loader2 } from "lucide-react";
 import { getDashboardData, type DashboardData } from "@/lib/api";
 import HostDashboard from "@/components/HostDashboard";
 
-const Dashboard = () => {
-  const { adminSlug } = useParams<{ adminSlug: string }>();
+const MeetingDashboard = () => {
+  const { meetingId } = useParams<{ meetingId: string }>();
   const [meeting, setMeeting] = useState<DashboardData["meeting"] | null>(null);
   const [guests, setGuests] = useState<DashboardData["guests"]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!adminSlug) {
+    if (!meetingId) {
       setError("Missing meeting id in the URL.");
       setIsLoading(false);
       return;
@@ -22,7 +22,7 @@ const Dashboard = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await getDashboardData(adminSlug);
+        const data = await getDashboardData(meetingId);
         if (!cancelled) {
           setMeeting(data.meeting);
           setGuests(data.guests);
@@ -40,7 +40,7 @@ const Dashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [adminSlug]);
+  }, [meetingId]);
 
   if (isLoading) {
     return (
@@ -72,9 +72,9 @@ const Dashboard = () => {
       meeting={meeting}
       guests={guests}
       guestLink={guestLink}
-      adminSlug={adminSlug}
+      adminSlug={meetingId}
     />
   );
 };
 
-export default Dashboard;
+export default MeetingDashboard;

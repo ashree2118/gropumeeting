@@ -74,23 +74,37 @@ export interface MeetingForGuest {
   proposedDates: string[];
   guestSlug: string;
   status: string;
+  guest?: {
+    id: string;
+    name: string;
+    email: string | null;
+    availabilities: { startTime: string; endTime: string }[];
+  };
 }
 
-export async function getMeeting(guestSlug: string): Promise<MeetingForGuest> {
+export async function getMeeting(guestSlug: string, guestId?: string): Promise<MeetingForGuest> {
+  const url = new URL(`${API_BASE_URL}/meetings/guest/${encodeURIComponent(guestSlug)}`);
+  if (guestId) {
+    url.searchParams.set('guestId', guestId);
+  }
   return parseJson(
-    await fetch(
-      `${API_BASE_URL}/meetings/guest/${encodeURIComponent(guestSlug)}`
-    )
+    await fetch(url.toString())
   );
 }
 
 export interface SubmitVoteBody {
   name: string;
   email?: string;
+  guestId?: string;
   availabilities: { startTime: string; endTime: string }[];
 }
 
-export async function submitVote(guestSlug: string, data: SubmitVoteBody) {
+export interface SubmitVoteResponse {
+  message: string;
+  guestId: string;
+}
+
+export async function submitVote(guestSlug: string, data: SubmitVoteBody): Promise<SubmitVoteResponse> {
   return parseJson(
     await fetch(
       `${API_BASE_URL}/meetings/guest/${encodeURIComponent(guestSlug)}/vote`,
@@ -148,5 +162,27 @@ export async function confirmMeeting(adminSlug: string, data: ConfirmMeetingBody
         body: JSON.stringify(data),
       }
     )
+  );
+}
+
+export interface MyMeeting {
+  id: string;
+  hostId: string;
+  title: string;
+  description: string | null;
+  durationMinutes: number;
+  guestSlug: string;
+  proposedDates: string[];
+  status: string;
+  finalStartTime: string | null;
+  finalEndTime: string | null;
+  createdAt: string;
+}
+
+export async function getMyMeetings(): Promise<MyMeeting[]> {
+  return parseJson(
+    await fetch(`${API_BASE_URL}/meetings/mine`, {
+      headers: getHeadersWithAuth(),
+    })
   );
 }

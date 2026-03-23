@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CalendarDays, RotateCcw } from "lucide-react";
 
 const DEFAULT_DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-const START_HOUR = 8;
-const END_HOUR = 18;
+const START_HOUR = 0;
+const END_HOUR = 24;
 const SLOTS_PER_HOUR = 2;
 const SLOT_MINUTES = 30;
 export const GRID_TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;
@@ -64,14 +64,19 @@ export interface AvailabilityGridProps {
   onAvailabilitiesChange?: (availabilities: AvailabilitySlot[]) => void;
   /** Hide the built-in submit row (e.g. when parent provides the submit button). */
   showFooterSubmit?: boolean;
+  /** Pre-populate selected cells (e.g. when editing an existing vote). Keys are "dayIdx-slotIdx". */
+  initialSelected?: Set<string>;
 }
 
 const AvailabilityGrid = ({
   proposedDates,
   onAvailabilitiesChange,
   showFooterSubmit = true,
+  initialSelected,
 }: AvailabilityGridProps = {}) => {
-  const [selected, setSelected] = useState<Set<CellKey>>(new Set());
+  const [selected, setSelected] = useState<Set<CellKey>>(
+    () => (initialSelected as Set<CellKey>) ?? new Set()
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState<"add" | "remove">("add");
   const [dragStart, setDragStart] = useState<{ day: number; slot: number } | null>(null);
@@ -204,7 +209,7 @@ const AvailabilityGrid = ({
           </div>
 
           <div
-            className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60"
+            className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60 max-h-[500px] overflow-y-auto"
             style={{ gridTemplateColumns }}
           >
             {Array.from({ length: GRID_TOTAL_SLOTS }, (_, slotIdx) => (

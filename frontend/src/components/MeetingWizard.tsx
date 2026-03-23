@@ -309,7 +309,13 @@ const MeetingWizard = () => {
               <Button
                 variant="outline"
                 className="w-full gap-2"
-                onClick={() => adminLink && navigate(adminLink)}
+                onClick={() => {
+                  if (adminLink) {
+                    // adminLink is "/dashboard/<meetingId>" — extract the id
+                    const meetingId = adminLink.split("/").pop();
+                    navigate(`/meeting/${meetingId}`);
+                  }
+                }}
                 disabled={!adminLink}
               >
                 <LayoutDashboard className="h-4 w-4" />
