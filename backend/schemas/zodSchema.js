@@ -20,6 +20,5 @@ export const submitVoteSchema = z.object({
 });
 
 export const confirmMeetingSchema = z.object({
-  finalStartTime: z.string().datetime(),
-  finalEndTime: z.string().datetime()
+  finalStartTime: z.string().datetime()
 });

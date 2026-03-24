@@ -150,7 +150,7 @@ export async function getDashboardData(adminSlug: string): Promise<DashboardData
 
 export interface ConfirmMeetingBody {
   finalStartTime: string;
-  finalEndTime: string;
+  finalEndTime?: string;
 }
 
 export async function confirmMeeting(adminSlug: string, data: ConfirmMeetingBody) {

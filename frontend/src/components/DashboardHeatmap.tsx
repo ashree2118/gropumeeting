@@ -95,21 +95,26 @@ const DashboardHeatmap = ({
     slot: number;
   } | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const normalizedDates = useMemo(
+    () => proposedDates.map((d) => (typeof d === "string" ? d : String(d))),
+    [proposedDates]
+  );
+  const selectedSlotBounds = useMemo(() => {
+    if (!selectedSlot) return null;
+    return slotBoundsForCell(
+      normalizedDates[selectedSlot.day],
+      selectedSlot.slot
+    );
+  }, [selectedSlot, normalizedDates]);
 
   const handleConfirmMeeting = async () => {
-    if (!selectedSlot) return;
+    if (!selectedSlotBounds) return;
 
     try {
       setIsConfirming(true);
-      const { start, end } = slotBoundsForCell(
-        normalizedDates[selectedSlot.day],
-        selectedSlot.slot
-      );
-      const finalStartTime = start.toISOString();
-      const finalEndTime = end.toISOString();
+      const finalStartTime = selectedSlotBounds.start.toISOString();
       await confirmMeeting(adminSlug, {
         finalStartTime,
-        finalEndTime,
       });
       toast.success("Meeting time confirmed!");
       setSelectedSlot(null);
@@ -121,11 +126,6 @@ const DashboardHeatmap = ({
       setIsConfirming(false);
     }
   };
-
-  const normalizedDates = useMemo(
-    () => proposedDates.map((d) => (typeof d === "string" ? d : String(d))),
-    [proposedDates]
-  );
 
   const columnLabels = useMemo(() => {
     return normalizedDates.map((d) =>
@@ -259,7 +259,12 @@ const DashboardHeatmap = ({
             <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
               <span className="font-medium text-foreground">
                 {columnLabels[selectedSlot.day]},{" "}
-                {formatTime(selectedSlot.slot)}–{formatTime(selectedSlot.slot + 2)}
+                {selectedSlotBounds
+                  ? `${format(selectedSlotBounds.start, "h:mm a")}–${format(
+                      selectedSlotBounds.end,
+                      "h:mm a"
+                    )}`
+                  : `${formatTime(selectedSlot.slot)}–${formatTime(selectedSlot.slot + 1)}`}
               </span>
               <span className="text-muted-foreground ml-2">
                 — {votes[selectedSlot.slot][selectedSlot.day]} of {respondedCount}{" "}

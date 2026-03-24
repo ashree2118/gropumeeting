@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createEvent } from 'ics';
 
 export const sendMeetingConfirmation = async (meeting, host, guests) => {
   const apiKey = process.env.BREVO_API_KEY;
@@ -43,6 +44,59 @@ export const sendMeetingConfirmation = async (meeting, host, guests) => {
     ...validGuestRecipients
   ];
 
+  const toIcsUtcArray = (dateValue) => {
+    const date = new Date(dateValue);
+    return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes()];
+  };
+
+  const start = toIcsUtcArray(meeting.finalStartTime);
+
+  const validAttendees = guests
+    .filter(g => g.email && g.email.trim() !== '')
+    .map(g => ({
+      name: g.name,
+      email: g.email.trim(),
+      rsvp: true,
+      partstat: 'NEEDS-ACTION',
+      role: 'REQ-PARTICIPANT'
+    }));
+
+  const eventObject = {
+    start,
+    duration: { minutes: meeting.durationMinutes },
+    title: meeting.title,
+    description: meeting.description || '',
+    uid: `${meeting.id}@meetrix`,
+    organizer: {
+      name: host.name,
+      email: process.env.BREVO_SENDER_EMAIL
+    },
+    attendees: validAttendees,
+    method: 'REQUEST',
+    status: 'CONFIRMED',
+    startInputType: 'utc',
+    startOutputType: 'utc'
+  };
+
+  let base64IcsString = '';
+  await new Promise((resolve) => {
+    createEvent(eventObject, (error, value) => {
+      if (error) {
+        console.error('Error creating ICS invite:', error);
+        resolve();
+        return;
+      }
+
+      // Force METHOD:REQUEST if the ics library didn't include it
+      let icsString = value;
+      if (!icsString.includes('METHOD:REQUEST')) {
+        icsString = icsString.replace('BEGIN:VCALENDAR', 'BEGIN:VCALENDAR\nMETHOD:REQUEST');
+      }
+      base64IcsString = Buffer.from(icsString).toString('base64');
+      resolve();
+    });
+  });
+
   const payload = {
     sender: {
       name: process.env.BREVO_SENDER_NAME,
@@ -52,6 +106,16 @@ export const sendMeetingConfirmation = async (meeting, host, guests) => {
     subject: `Confirmed: ${meeting.title} on ${startDate}`,
     htmlContent: htmlContent
   };
+
+  if (base64IcsString) {
+    payload.attachment = [
+      {
+        name: 'invite.ics',
+        content: base64IcsString,
+        contentType: 'text/calendar'
+      }
+    ];
+  }
 
   try {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {

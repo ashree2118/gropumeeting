@@ -63,22 +63,25 @@ export const getMeetingForGuest = async (req, res) => {
 
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-        // Determine time range from proposed dates
-        const sortedDates = [...meeting.proposedDates].sort();
-        const timeMin = new Date(sortedDates[0]);
-        timeMin.setHours(0, 0, 0, 0);
-        const timeMax = new Date(sortedDates[sortedDates.length - 1]);
-        timeMax.setHours(23, 59, 59, 999);
+        // Widen the search window to handle UTC offset mismatches
+        const firstDate = new Date(meeting.proposedDates[0]);
+        const lastDate = new Date(meeting.proposedDates[meeting.proposedDates.length - 1]);
+
+        // Subtract 24 hours to ensure we don't miss morning events due to UTC offsets
+        const timeMin = new Date(firstDate.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        // Add 48 hours to ensure we cover the entire final day across all timezones
+        const timeMax = new Date(lastDate.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
         const freebusyRes = await calendar.freebusy.query({
           requestBody: {
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax.toISOString(),
+            timeMin,
+            timeMax,
             items: [{ id: 'primary' }],
           },
         });
 
         const busySlots = freebusyRes.data.calendars.primary.busy || [];
+        console.log("🔍 GOOGLE BUSY DATA:", JSON.stringify(busySlots));
         hostBusyTimes = busySlots.map(slot => ({ start: slot.start, end: slot.end }));
       }
     } catch (calendarError) {
@@ -202,17 +205,20 @@ export const getDashboardData = async (req, res) => {
 export const confirmMeeting = async (req, res) => {
   try {
     const { meetingId } = req.params;
-    const { finalStartTime, finalEndTime } = req.body;
+    const { finalStartTime } = req.body;
     const hostId = req.user.id; 
     const meetingResult = await db.select().from(meetings).where(eq(meetings.id, meetingId));
     if (meetingResult.length === 0 || meetingResult[0].hostId !== hostId) {
       return res.status(403).json({ error: "Unauthorized or meeting not found." });
     }
+    const calculatedEndTime = new Date(
+      new Date(finalStartTime).getTime() + meetingResult[0].durationMinutes * 60000
+    );
     const updatedMeetingResult = await db.update(meetings)
       .set({ 
         status: 'CONFIRMED', 
         finalStartTime: new Date(finalStartTime), 
-        finalEndTime: new Date(finalEndTime) 
+        finalEndTime: calculatedEndTime
       })
       .where(eq(meetings.id, meetingId))
       .returning();
