@@ -74,6 +74,7 @@ export interface MeetingForGuest {
   proposedDates: string[];
   guestSlug: string;
   status: string;
+  hostBusyTimes?: { start: string; end: string }[];
   guest?: {
     id: string;
     name: string;

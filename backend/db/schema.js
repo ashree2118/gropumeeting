@@ -7,6 +7,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   picture: text("picture"),
+  googleRefreshToken: text("google_refresh_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

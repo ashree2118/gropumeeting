@@ -66,6 +66,33 @@ export interface AvailabilityGridProps {
   showFooterSubmit?: boolean;
   /** Pre-populate selected cells (e.g. when editing an existing vote). Keys are "dayIdx-slotIdx". */
   initialSelected?: Set<string>;
+  /** Host's busy times from Google Calendar — cells overlapping these are blocked. */
+  hostBusyTimes?: { start: string; end: string }[];
+}
+
+/** Convert hostBusyTimes into a Set<CellKey> for O(1) lookups. */
+function buildBusyCellSet(
+  busyTimes: { start: string; end: string }[],
+  proposedDates: string[]
+): Set<CellKey> {
+  const keys = new Set<CellKey>();
+  for (const block of busyTimes) {
+    const bStart = new Date(block.start).getTime();
+    const bEnd = new Date(block.end).getTime();
+    // Walk every proposed date + every slot and check overlap
+    for (let dayIdx = 0; dayIdx < proposedDates.length; dayIdx++) {
+      const [y, mo, d] = proposedDates[dayIdx].split("-").map(Number);
+      for (let slotIdx = 0; slotIdx < GRID_TOTAL_SLOTS; slotIdx++) {
+        const slotStart = new Date(y, mo - 1, d, START_HOUR, slotIdx * SLOT_MINUTES).getTime();
+        const slotEnd = slotStart + SLOT_MINUTES * 60 * 1000;
+        // Overlap: slotStart < bEnd && slotEnd > bStart
+        if (slotStart < bEnd && slotEnd > bStart) {
+          keys.add(`${dayIdx}-${slotIdx}`);
+        }
+      }
+    }
+  }
+  return keys;
 }
 
 const AvailabilityGrid = ({
@@ -73,6 +100,7 @@ const AvailabilityGrid = ({
   onAvailabilitiesChange,
   showFooterSubmit = true,
   initialSelected,
+  hostBusyTimes = [],
 }: AvailabilityGridProps = {}) => {
   const [selected, setSelected] = useState<Set<CellKey>>(
     () => (initialSelected as Set<CellKey>) ?? new Set()
@@ -82,6 +110,11 @@ const AvailabilityGrid = ({
   const [dragStart, setDragStart] = useState<{ day: number; slot: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ day: number; slot: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  const busyCells = useMemo(
+    () => buildBusyCellSet(hostBusyTimes, proposedDates ?? []),
+    [hostBusyTimes, proposedDates]
+  );
 
   const columnLabels = useMemo(() => {
     if (proposedDates?.length) {
@@ -117,6 +150,7 @@ const AvailabilityGrid = ({
   }, [dragStart, dragCurrent]);
 
   const handlePointerDown = (day: number, slot: number) => {
+    if (busyCells.has(`${day}-${slot}`)) return;
     const key: CellKey = `${day}-${slot}`;
     const mode = selected.has(key) ? "remove" : "add";
     setDragMode(mode);
@@ -127,6 +161,7 @@ const AvailabilityGrid = ({
 
   const handlePointerEnter = (day: number, slot: number) => {
     if (!isDragging) return;
+    if (busyCells.has(`${day}-${slot}`)) return;
     setDragCurrent({ day, slot });
   };
 
@@ -222,23 +257,36 @@ const AvailabilityGrid = ({
                   )}
                 </div>
                 {Array.from({ length: numDays }, (_, dayIdx) => {
+                  const cellKey: CellKey = `${dayIdx}-${slotIdx}`;
+                  const busy = busyCells.has(cellKey);
                   const active = isCellActive(dayIdx, slotIdx);
                   const preview = isCellPreview(dayIdx, slotIdx);
                   const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
                   return (
                     <div
-                      key={`${dayIdx}-${slotIdx}`}
+                      key={cellKey}
                       className={[
-                        "h-5 transition-colors duration-75 cursor-pointer",
+                        "h-5 transition-colors duration-75",
                         isHourStart ? "border-t border-border/40" : "",
-                        active
-                          ? preview
-                            ? "bg-primary/70"
-                            : "bg-primary/85"
-                          : preview && dragMode === "remove"
-                            ? "bg-destructive/20"
-                            : "bg-background hover:bg-muted/60",
+                        busy
+                          ? "bg-destructive/15 cursor-not-allowed opacity-50"
+                          : active
+                            ? preview
+                              ? "bg-primary/70 cursor-pointer"
+                              : "bg-primary/85 cursor-pointer"
+                            : preview && dragMode === "remove"
+                              ? "bg-destructive/20 cursor-pointer"
+                              : "bg-background hover:bg-muted/60 cursor-pointer",
                       ].join(" ")}
+                      style={
+                        busy
+                          ? {
+                              backgroundImage:
+                                "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(239,68,68,0.12) 3px, rgba(239,68,68,0.12) 5px)",
+                            }
+                          : undefined
+                      }
+                      title={busy ? "Host is busy" : undefined}
                       onPointerDown={() => handlePointerDown(dayIdx, slotIdx)}
                       onPointerEnter={() => handlePointerEnter(dayIdx, slotIdx)}
                     />
@@ -257,6 +305,12 @@ const AvailabilityGrid = ({
               <div className="h-3 w-3 rounded-sm bg-background border border-border" />
               Unavailable
             </div>
+            {hostBusyTimes.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="h-3 w-3 rounded-sm bg-destructive/15 opacity-50 border border-destructive/30" />
+                Host busy
+              </div>
+            )}
           </div>
         </div>
 

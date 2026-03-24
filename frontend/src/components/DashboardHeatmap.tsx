@@ -6,8 +6,8 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmMeeting, type DashboardGuestRow } from "@/lib/api";
 
-const START_HOUR = 8;
-const END_HOUR = 18;
+const START_HOUR = 0;
+const END_HOUR = 24;
 const SLOTS_PER_HOUR = 2;
 const SLOT_MINUTES = 30;
 const TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;

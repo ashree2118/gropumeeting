@@ -267,6 +267,7 @@ const GuestVote = () => {
               onAvailabilitiesChange={onAvailabilitiesChange}
               showFooterSubmit={false}
               initialSelected={initialSelected}
+              hostBusyTimes={meeting.hostBusyTimes ?? []}
             />
 
             <div className="flex justify-center sm:justify-end">

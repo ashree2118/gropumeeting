@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { eq, and, desc } from 'drizzle-orm';
 import { users } from '../db/schema.js';
 import { sendMeetingConfirmation } from '../utils/email.js';
+import { google } from 'googleapis';
 
 export const createMeeting = async (req, res) => {
   try {
@@ -46,6 +47,45 @@ export const getMeetingForGuest = async (req, res) => {
     }
     const meeting = meetingResult[0];
 
+    // --- Fetch host's Google Calendar busy times ---
+    let hostBusyTimes = [];
+    try {
+      const hostResult = await db.select().from(users).where(eq(users.id, meeting.hostId));
+      const host = hostResult[0];
+
+      if (host && host.googleRefreshToken) {
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          'postmessage'
+        );
+        oauth2Client.setCredentials({ refresh_token: host.googleRefreshToken });
+
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+        // Determine time range from proposed dates
+        const sortedDates = [...meeting.proposedDates].sort();
+        const timeMin = new Date(sortedDates[0]);
+        timeMin.setHours(0, 0, 0, 0);
+        const timeMax = new Date(sortedDates[sortedDates.length - 1]);
+        timeMax.setHours(23, 59, 59, 999);
+
+        const freebusyRes = await calendar.freebusy.query({
+          requestBody: {
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            items: [{ id: 'primary' }],
+          },
+        });
+
+        const busySlots = freebusyRes.data.calendars.primary.busy || [];
+        hostBusyTimes = busySlots.map(slot => ({ start: slot.start, end: slot.end }));
+      }
+    } catch (calendarError) {
+      console.error("Calendar sync error (non-fatal):", calendarError.message);
+      hostBusyTimes = [];
+    }
+
     // If a guestId is provided, fetch that guest's existing data
     if (guestId) {
       const guestResult = await db.select().from(guests)
@@ -56,6 +96,7 @@ export const getMeetingForGuest = async (req, res) => {
           .where(eq(availabilities.guestId, guest.id));
         return res.status(200).json({
           ...meeting,
+          hostBusyTimes,
           guest: {
             id: guest.id,
             name: guest.name,
@@ -66,7 +107,7 @@ export const getMeetingForGuest = async (req, res) => {
       }
     }
 
-    res.status(200).json(meeting);
+    res.status(200).json({ ...meeting, hostBusyTimes });
   } catch (error) {
     console.error("Error fetching meeting:", error);
     res.status(500).json({ error: "Failed to fetch meeting details" });
