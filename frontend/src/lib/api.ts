@@ -133,6 +133,8 @@ export interface DashboardMeetingRow {
   proposedDates: string[];
   guestSlug: string;
   status: string;
+  finalStartTime?: string | null;
+  finalEndTime?: string | null;
 }
 
 export interface DashboardData {

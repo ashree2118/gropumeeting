@@ -10,6 +10,14 @@ export const createMeeting = async (req, res) => {
   try {
     const { title, description, durationMinutes, proposedDates } = req.body;
     const hostId = req.user.id; 
+
+    // Block past dates
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (Array.isArray(proposedDates) && proposedDates.every(d => d < todayStr)) {
+      return res.status(400).json({ error: "Cannot schedule in the past" });
+    }
+
     const guestSlug = nanoid(10); 
     const newMeeting = await db.insert(meetings).values({
       hostId,
@@ -207,6 +215,12 @@ export const confirmMeeting = async (req, res) => {
     const { meetingId } = req.params;
     const { finalStartTime } = req.body;
     const hostId = req.user.id; 
+
+    // Block confirming a time in the past
+    if (new Date(finalStartTime) < new Date()) {
+      return res.status(400).json({ error: "Cannot schedule in the past" });
+    }
+
     const meetingResult = await db.select().from(meetings).where(eq(meetings.id, meetingId));
     if (meetingResult.length === 0 || meetingResult[0].hostId !== hostId) {
       return res.status(403).json({ error: "Unauthorized or meeting not found." });

@@ -223,16 +223,36 @@ const GlobalDashboard = () => {
                         <h3 className="text-sm font-semibold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
                           {meeting.title}
                         </h3>
-                        <Badge
-                          variant={
-                            meeting.status === "CONFIRMED"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="shrink-0 text-[10px] uppercase tracking-wider"
-                        >
-                          {meeting.status}
-                        </Badge>
+                        {(() => {
+                          const now = new Date();
+                          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+                          const allPast =
+                            meeting.status !== "CONFIRMED" &&
+                            Array.isArray(meeting.proposedDates) &&
+                            meeting.proposedDates.length > 0 &&
+                            meeting.proposedDates.every((d) => d < todayStr);
+                          return allPast ? (
+                            <Badge
+                              variant="destructive"
+                              className="shrink-0 text-[10px] uppercase tracking-wider"
+                            >
+                              Expired
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant={
+                                meeting.status === "CONFIRMED"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="shrink-0 text-[10px] uppercase tracking-wider"
+                            >
+                              {meeting.status === "CONFIRMED"
+                                ? "Confirmed"
+                                : "Pending"}
+                            </Badge>
+                          );
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">

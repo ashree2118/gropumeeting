@@ -9,8 +9,10 @@ import {
   CheckCircle2,
   Target,
   Copy,
+  PartyPopper,
 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import DashboardHeatmap from "@/components/DashboardHeatmap";
 import type { DashboardGuestRow, DashboardMeetingRow } from "@/lib/api";
 
@@ -87,6 +89,33 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
             </CardContent>
           </Card>
 
+          {/* Finalized time banner */}
+          {meeting.status === 'CONFIRMED' && meeting.finalStartTime && meeting.finalEndTime && (
+            <Card className="border-primary/30 bg-primary/5 shadow-sm">
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                    <PartyPopper className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      Meeting Confirmed
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Finalized for:{" "}
+                      <span className="font-medium text-foreground">
+                        {format(new Date(meeting.finalStartTime), "MMM d, h:mm a")}
+                        {" – "}
+                        {format(new Date(meeting.finalEndTime), "h:mm a")}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="border-border/50 shadow-sm">
             <DashboardHeatmap
               proposedDates={proposedDates}
@@ -148,12 +177,6 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
               );
             })
           )}
-        </div>
-
-        <div className="p-4 border-t border-border/60">
-          <Button variant="outline" size="sm" className="w-full text-xs">
-            Send Reminder
-          </Button>
         </div>
       </aside>
     </div>

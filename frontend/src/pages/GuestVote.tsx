@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, CalendarCheck, PartyPopper } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import AvailabilityGrid, {
   type AvailabilitySlot,
 } from "@/components/AvailabilityGrid";
@@ -59,7 +59,7 @@ const GuestVote = () => {
   const [email, setEmail] = useState("");
   const [availabilities, setAvailabilities] = useState<AvailabilitySlot[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const [existingGuestId, setExistingGuestId] = useState<string | null>(null);
   const [initialSelected, setInitialSelected] = useState<Set<string> | undefined>(undefined);
@@ -129,7 +129,8 @@ const GuestVote = () => {
         localStorage.setItem(localStorageKey(guestSlug), result.guestId);
         setExistingGuestId(result.guestId);
       }
-      setSuccess(true);
+      setSubmitted(true);
+      toast.success("Availability saved!");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to submit availability");
     } finally {
@@ -169,28 +170,7 @@ const GuestVote = () => {
     );
   }
 
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-        <Card className="w-full max-w-lg border-border/50 shadow-lg">
-          <CardHeader className="text-center pb-2">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-              <PartyPopper className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl font-semibold tracking-tight">
-              {isEditing ? "Availability Updated!" : "Thanks for voting!"}
-            </CardTitle>
-            <CardDescription className="text-base text-muted-foreground">
-              Your availability has been sent to the host.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center pb-8">
-            <CalendarCheck className="h-12 w-12 text-muted-foreground/40" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  /* success view removed — we now show a toast and keep the user on the grid */
 
   const hasDates = meeting.proposedDates.length > 0;
   const canSubmit =
@@ -281,6 +261,11 @@ const GuestVote = () => {
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {isEditing ? "Updating…" : "Submitting…"}
+                  </>
+                ) : submitted ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {isEditing ? "Update Again" : "Saved ✓"}
                   </>
                 ) : isEditing ? (
                   "Update Availability"

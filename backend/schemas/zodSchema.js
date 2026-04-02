@@ -13,7 +13,7 @@ export const submitVoteSchema = z.object({
   guestId: z.string().uuid().optional(),
   availabilities: z.array(
     z.object({
-      startTime: z.string().datetime(), // Ensures it's a valid ISO 8601 timestamp
+      startTime: z.string().datetime(),
       endTime: z.string().datetime()
     })
   ).min(1, "Please select at least one time slot")

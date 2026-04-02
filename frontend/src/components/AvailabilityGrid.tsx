@@ -95,6 +95,21 @@ function buildBusyCellSet(
   return keys;
 }
 
+function buildPastCellSet(proposedDates: string[]): Set<CellKey> {
+  const keys = new Set<CellKey>();
+  const now = Date.now();
+  for (let dayIdx = 0; dayIdx < proposedDates.length; dayIdx++) {
+    const [y, mo, d] = proposedDates[dayIdx].split("-").map(Number);
+    for (let slotIdx = 0; slotIdx < GRID_TOTAL_SLOTS; slotIdx++) {
+      const slotEnd = new Date(y, mo - 1, d, START_HOUR, slotIdx * SLOT_MINUTES + SLOT_MINUTES).getTime();
+      if (slotEnd <= now) {
+        keys.add(`${dayIdx}-${slotIdx}`);
+      }
+    }
+  }
+  return keys;
+}
+
 const AvailabilityGrid = ({
   proposedDates,
   onAvailabilitiesChange,
@@ -114,6 +129,11 @@ const AvailabilityGrid = ({
   const busyCells = useMemo(
     () => buildBusyCellSet(hostBusyTimes, proposedDates ?? []),
     [hostBusyTimes, proposedDates]
+  );
+
+  const pastCells = useMemo(
+    () => buildPastCellSet(proposedDates ?? []),
+    [proposedDates]
   );
 
   const columnLabels = useMemo(() => {
@@ -150,8 +170,8 @@ const AvailabilityGrid = ({
   }, [dragStart, dragCurrent]);
 
   const handlePointerDown = (day: number, slot: number) => {
-    if (busyCells.has(`${day}-${slot}`)) return;
     const key: CellKey = `${day}-${slot}`;
+    if (busyCells.has(key) || pastCells.has(key)) return;
     const mode = selected.has(key) ? "remove" : "add";
     setDragMode(mode);
     setDragStart({ day, slot });
@@ -161,7 +181,8 @@ const AvailabilityGrid = ({
 
   const handlePointerEnter = (day: number, slot: number) => {
     if (!isDragging) return;
-    if (busyCells.has(`${day}-${slot}`)) return;
+    const key: CellKey = `${day}-${slot}`;
+    if (busyCells.has(key) || pastCells.has(key)) return;
     setDragCurrent({ day, slot });
   };
 
@@ -259,6 +280,7 @@ const AvailabilityGrid = ({
                 {Array.from({ length: numDays }, (_, dayIdx) => {
                   const cellKey: CellKey = `${dayIdx}-${slotIdx}`;
                   const busy = busyCells.has(cellKey);
+                  const past = pastCells.has(cellKey);
                   const active = isCellActive(dayIdx, slotIdx);
                   const preview = isCellPreview(dayIdx, slotIdx);
                   const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
@@ -268,25 +290,27 @@ const AvailabilityGrid = ({
                       className={[
                         "h-5 transition-colors duration-75",
                         isHourStart ? "border-t border-border/40" : "",
-                        busy
-                          ? "bg-destructive/15 cursor-not-allowed opacity-50"
-                          : active
-                            ? preview
-                              ? "bg-primary/70 cursor-pointer"
-                              : "bg-primary/85 cursor-pointer"
-                            : preview && dragMode === "remove"
-                              ? "bg-destructive/20 cursor-pointer"
-                              : "bg-background hover:bg-muted/60 cursor-pointer",
+                        past
+                          ? "bg-muted/40 cursor-not-allowed opacity-40"
+                          : busy
+                            ? "bg-destructive/15 cursor-not-allowed opacity-50"
+                            : active
+                              ? preview
+                                ? "bg-primary/70 cursor-pointer"
+                                : "bg-primary/85 cursor-pointer"
+                              : preview && dragMode === "remove"
+                                ? "bg-destructive/20 cursor-pointer"
+                                : "bg-background hover:bg-muted/60 cursor-pointer",
                       ].join(" ")}
                       style={
-                        busy
+                        busy && !past
                           ? {
                               backgroundImage:
                                 "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(239,68,68,0.12) 3px, rgba(239,68,68,0.12) 5px)",
                             }
                           : undefined
                       }
-                      title={busy ? "Host is busy" : undefined}
+                      title={past ? "Past" : busy ? "Host is busy" : undefined}
                       onPointerDown={() => handlePointerDown(dayIdx, slotIdx)}
                       onPointerEnter={() => handlePointerEnter(dayIdx, slotIdx)}
                     />
@@ -305,6 +329,12 @@ const AvailabilityGrid = ({
               <div className="h-3 w-3 rounded-sm bg-background border border-border" />
               Unavailable
             </div>
+            {pastCells.size > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="h-3 w-3 rounded-sm bg-muted/40 opacity-40 border border-border" />
+                Past
+              </div>
+            )}
             {hostBusyTimes.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="h-3 w-3 rounded-sm bg-destructive/15 opacity-50 border border-destructive/30" />
