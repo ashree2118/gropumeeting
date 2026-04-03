@@ -1,4 +1,4 @@
-export const sendMeetingConfirmation = async (meeting, host, guests) => {
+export const sendMeetingConfirmation = async (meeting, host, guests, meetLink) => {
   try {
     const startDate = new Date(meeting.finalStartTime).toLocaleDateString(undefined, {
       weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
@@ -35,6 +35,9 @@ export const sendMeetingConfirmation = async (meeting, host, guests) => {
           <a href="${googleCalendarUrl}" target="_blank" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
             📅 Add to Google Calendar
           </a>
+          ${meetLink ? `<br><br><a href="${meetLink}" target="_blank" style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+            📹 Join Google Meet
+          </a>` : `<p style="margin-top: 18px; color: #334155;">(Google Meet link was not generated automatically because the host’s calendar event creation did not return one. Please check the Google account and scope/consent settings.)</p>`}
         </div>
 
         <h3>Attendees:</h3>

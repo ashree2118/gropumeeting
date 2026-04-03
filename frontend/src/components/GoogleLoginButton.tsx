@@ -12,7 +12,10 @@ export function GoogleLoginButton() {
 
   const googleLogin = useGoogleLogin({
     flow: "auth-code",
-    scope: "https://www.googleapis.com/auth/calendar.readonly",
+    scope: "https://www.googleapis.com/auth/calendar.events",
+    prompt: "consent",
+    access_type: "offline",
+    include_granted_scopes: true,
     onSuccess: async (codeResponse) => {
       try {
         const res = await fetch(AUTH_GOOGLE_URL, {

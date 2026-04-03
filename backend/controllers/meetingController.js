@@ -228,6 +228,61 @@ export const confirmMeeting = async (req, res) => {
     const calculatedEndTime = new Date(
       new Date(finalStartTime).getTime() + meetingResult[0].durationMinutes * 60000
     );
+
+    const hostResult = await db.select().from(users).where(eq(users.id, hostId));
+    const host = hostResult[0];
+    const meetingGuests = await db.select().from(guests).where(eq(guests.meetingId, meetingId));
+
+    // Auto-generate Google Meet link and inject into host's calendar
+    let meetLink = null;
+    try {
+      if (host?.googleRefreshToken) {
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          'postmessage'
+        );
+        oauth2Client.setCredentials({ refresh_token: host.googleRefreshToken });
+
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+        const event = {
+          summary: meetingResult[0].title,
+          description: meetingResult[0].description || 'Scheduled via Meetrix',
+          start: { dateTime: new Date(finalStartTime).toISOString(), timeZone: 'UTC' },
+          end: { dateTime: calculatedEndTime.toISOString(), timeZone: 'UTC' },
+          attendees: meetingGuests.filter(g => g.email).map(g => ({ email: g.email })),
+          conferenceData: {
+            createRequest: {
+              requestId: `meetrix-${meetingId}-${Date.now()}`,
+              conferenceSolutionKey: { type: 'hangoutsMeet' }
+            }
+          }
+        };
+
+        const eventResponse = await calendar.events.insert({
+          calendarId: 'primary',
+          resource: event,
+          conferenceDataVersion: 1,
+          sendUpdates: 'all'
+        });
+
+        // Extract the Meet link (best effort)
+        meetLink = eventResponse.data.hangoutLink || meetLink;
+
+        const conferenceData = eventResponse.data.conferenceData;
+        if (!meetLink && conferenceData && conferenceData.entryPoints) {
+          const meetEntry = conferenceData.entryPoints.find(ep => ep.entryPointType === 'video');
+          if (meetEntry) {
+            meetLink = meetEntry.uri;
+          }
+        }
+      }
+    } catch (calendarError) {
+      console.error("Failed to create calendar event with Meet link:", calendarError.message);
+      // Continue without Meet link if calendar fails
+    }
+
     const updatedMeetingResult = await db.update(meetings)
       .set({ 
         status: 'CONFIRMED', 
@@ -238,11 +293,8 @@ export const confirmMeeting = async (req, res) => {
       .returning();
 
     const confirmedMeeting = updatedMeetingResult[0];
-    const hostResult = await db.select().from(users).where(eq(users.id, hostId));
-    const host = hostResult[0];
-    const meetingGuests = await db.select().from(guests).where(eq(guests.meetingId, meetingId));
 
-    sendMeetingConfirmation(confirmedMeeting, host, meetingGuests);
+    sendMeetingConfirmation(confirmedMeeting, host, meetingGuests, meetLink);
     res.status(200).json({ 
       message: "Meeting officially confirmed!", 
       meeting: confirmedMeeting 
