@@ -10,10 +10,15 @@ import {
   Target,
   Copy,
   PartyPopper,
+  Sparkles,
+  Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useState } from "react";
 import DashboardHeatmap from "@/components/DashboardHeatmap";
+import { fetchAiSuggestions, confirmMeeting } from "@/lib/api";
 import type { DashboardGuestRow, DashboardMeetingRow } from "@/lib/api";
 
 function getInitials(name: string): string {
@@ -34,6 +39,14 @@ export interface HostDashboardProps {
   adminSlug: string;
 }
 
+interface AiSuggestion {
+  suggestedStartTime: string | null;
+  attendeeCount: number;
+  explanation: string;
+  missingGuests?: string[];
+  noData?: boolean;
+}
+
 const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardProps) => {
   const proposedDates = Array.isArray(meeting.proposedDates)
     ? meeting.proposedDates.map((d) => (typeof d === "string" ? d : String(d)))
@@ -41,6 +54,44 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
 
   const respondedCount = guests.filter(guestHasResponded).length;
   const totalGuests = guests.length;
+
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [pendingConfirmTime, setPendingConfirmTime] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleAiSuggestions = async () => {
+    setIsAiLoading(true);
+    try {
+      const suggestions = await fetchAiSuggestions(meeting.id);
+      setAiSuggestions(Array.isArray(suggestions) ? suggestions : []);
+      toast.success("AI suggestions generated!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to fetch AI suggestions");
+      setAiSuggestions([]);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleSelectTime = (suggestedStartTime: string) => {
+    setPendingConfirmTime(suggestedStartTime);
+  };
+
+  const handleConfirmMeeting = async () => {
+    if (!pendingConfirmTime) return;
+    setIsConfirming(true);
+    try {
+      await confirmMeeting(adminSlug, { finalStartTime: pendingConfirmTime });
+      toast.success("Meeting confirmed! Invitations have been sent.");
+      // Reload to reflect the confirmed state
+      window.location.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to confirm meeting");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const copyGuestLink = () => {
     navigator.clipboard.writeText(guestLink).then(
@@ -114,6 +165,194 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* AI Smart Arbitrator Button */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleAiSuggestions}
+              disabled={isAiLoading}
+              className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              {isAiLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analyzing schedules...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Ask AI for Best Times
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* AI Suggestions / Confirm Time Section */}
+          {aiSuggestions.length > 0 && (
+            <div className="space-y-4">
+              {pendingConfirmTime ? (
+                /* ── Confirm Time View ── */
+                <>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      Confirm Meeting Time
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Review and confirm the selected time slot
+                    </p>
+                  </div>
+
+                  <Card className="border-primary/40 bg-primary/5 shadow-md">
+                    <CardContent className="pt-6 pb-6">
+                      <div className="space-y-5">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                            <CalendarDays className="h-6 w-6 text-primary" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-lg font-semibold text-foreground">
+                              {format(new Date(pendingConfirmTime), "EEEE, MMM d, yyyy")}
+                            </p>
+                            <p className="text-base text-foreground/80">
+                              {format(new Date(pendingConfirmTime), "h:mm a")}
+                              {" – "}
+                              {format(
+                                new Date(new Date(pendingConfirmTime).getTime() + meeting.durationMinutes * 60000),
+                                "h:mm a"
+                              )}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-2">
+                              All guests will be notified via email once confirmed.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => setPendingConfirmTime(null)}
+                            disabled={isConfirming}
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to suggestions
+                          </Button>
+                          <Button
+                            className="gap-2 flex-1"
+                            onClick={handleConfirmMeeting}
+                            disabled={isConfirming}
+                          >
+                            {isConfirming ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Confirming...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-4 w-4" />
+                                Confirm Meeting
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                /* ── Suggestions List View ── */
+                <>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-600" />
+                      AI Suggestions
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Smart scheduling powered by AI analysis
+                    </p>
+                  </div>
+                  <div className="grid gap-4">
+                    {aiSuggestions[0]?.noData ? (
+                      <Card className="border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-orange-50/50 shadow-sm">
+                        <CardContent className="pt-6">
+                          <div className="flex items-start gap-3">
+                            <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-foreground">
+                                {aiSuggestions[0].explanation}
+                              </p>
+                              {aiSuggestions[0].missingGuests && aiSuggestions[0].missingGuests.length > 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                  Waiting on: {aiSuggestions[0].missingGuests.join(", ")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      aiSuggestions.map((suggestion, idx) => {
+                        const endTime = new Date(
+                          new Date(suggestion.suggestedStartTime).getTime() +
+                            meeting.durationMinutes * 60000
+                        );
+                        return (
+                          <Card key={idx} className="border-purple-200/50 bg-gradient-to-br from-purple-50/50 to-pink-50/50 shadow-sm hover:shadow-md transition-shadow">
+                            <CardContent className="pt-6">
+                              <div className="space-y-4">
+                                {/* Time Display */}
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground mb-1">Suggested Time</p>
+                                    <p className="text-lg font-semibold text-foreground">
+                                      {format(new Date(suggestion.suggestedStartTime), "MMM d, yyyy")}
+                                    </p>
+                                    <p className="text-base text-foreground/80">
+                                      {format(new Date(suggestion.suggestedStartTime), "h:mm a")}
+                                      {" – "}
+                                      {format(endTime, "h:mm a")}
+                                    </p>
+                                  </div>
+                                  <Badge className="bg-green-600/90 hover:bg-green-700 gap-1 text-white">
+                                    <Users className="h-3 w-3" />
+                                    {suggestion.attendeeCount}/{totalGuests} can attend
+                                  </Badge>
+                                </div>
+
+                                {/* Explanation */}
+                                <p className="text-sm text-foreground/80 leading-relaxed">
+                                  {suggestion.explanation}
+                                </p>
+
+                                {/* Missing Guests */}
+                                {suggestion.missingGuests && suggestion.missingGuests.length > 0 && (
+                                  <div className="px-3 py-2.5 rounded-lg bg-red-50/70 border border-red-200/70">
+                                    <p className="text-sm font-medium text-red-900 flex items-center gap-2">
+                                      <Clock className="h-3.5 w-3.5" />
+                                      Missing: {suggestion.missingGuests.join(", ")}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Select Button */}
+                                <Button
+                                  onClick={() => handleSelectTime(suggestion.suggestedStartTime)}
+                                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                >
+                                  Select this time
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           <Card className="border-border/50 shadow-sm">

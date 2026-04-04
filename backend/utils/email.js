@@ -1,4 +1,4 @@
-export const sendMeetingConfirmation = async (meeting, host, guests, meetLink) => {
+export const sendMeetingConfirmation = async (meeting, host, guests, meetLink, aiNotes) => {
   try {
     const startDate = new Date(meeting.finalStartTime).toLocaleDateString(undefined, {
       weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
@@ -30,6 +30,11 @@ export const sendMeetingConfirmation = async (meeting, host, guests, meetLink) =
           <p><strong>Time:</strong> ${startTime} - ${endTime} (${meeting.durationMinutes} mins)</p>
           <p><strong>Host:</strong> ${host.name}</p>
         </div>
+
+        ${aiNotes ? `<div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #0284c7;">
+          <h3 style="margin-top: 0; color: #0c4a6e;">📋 Meeting Summary (AI-Generated)</h3>
+          <p style="color: #0c4a6e;">${aiNotes}</p>
+        </div>` : ''}
 
         <div style="text-align: center; margin: 30px 0;">
           <a href="${googleCalendarUrl}" target="_blank" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">

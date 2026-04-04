@@ -44,6 +44,17 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export const fetchAiSuggestions = async (meetingId: string) => {
+  const token = getStoredAuthToken();
+  const response = await fetch(`${API_BASE_URL}/meetings/${meetingId}/smart-arbitrator`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    }
+  });
+  if (!response.ok) throw new Error('Failed to fetch AI suggestions');
+  return response.json();
+};
 export interface CreateMeetingBody {
   title: string;
   description: string;

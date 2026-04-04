@@ -20,6 +20,7 @@ router.get('/meetings/mine', requireAuth, meetingController.getAllHostMeetings);
 router.get('/meetings/admin/:meetingId', requireAuth, meetingController.getDashboardData);
 router.post('/meetings/:meetingId/confirm', requireAuth, validateData(confirmMeetingSchema), meetingController.confirmMeeting);
 router.post('/meetings/admin/:meetingId/confirm', requireAuth, validateData(confirmMeetingSchema), meetingController.confirmMeeting);
+router.get('/meetings/:meetingId/smart-arbitrator', requireAuth, meetingController.getSmartArbitrator);
 
 //GUEST ROUTES (PUBLIC)
 router.get('/meetings/guest/:guestSlug', meetingController.getMeetingForGuest);

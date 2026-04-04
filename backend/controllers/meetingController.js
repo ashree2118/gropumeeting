@@ -1,4 +1,5 @@
 import { db } from '../db/index.js';
+import { GoogleGenAI } from "@google/genai";
 import { meetings, guests, availabilities } from '../db/schema.js';
 import { nanoid } from 'nanoid';
 import { eq, and, desc } from 'drizzle-orm';
@@ -235,7 +236,25 @@ export const confirmMeeting = async (req, res) => {
 
     // Auto-generate Google Meet link and inject into host's calendar
     let meetLink = null;
+    let aiNotes = null;
     try {
+      // Generate AI notes using GenAI
+      try {
+        if (process.env.GOOGLE_API_KEY) {
+          const genai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+          const model = genai.getGenerativeModel({ model: "gemini-1.5-flash" });
+          
+          const prompt = `Generate a concise meeting summary (2-3 sentences) for a meeting titled "${meetingResult[0].title}" with description "${meetingResult[0].description || 'No description provided'}". Include key discussion points and objectives.`;
+          
+          const result = await model.generateContent(prompt);
+          aiNotes = result.response.text();
+          console.log("✅ AI Notes Generated:", aiNotes);
+        }
+      } catch (genaiError) {
+        console.log("⚠️ GenAI notes generation skipped:", genaiError.message);
+        // Continue without AI notes if genai fails
+      }
+
       if (host?.googleRefreshToken) {
         const oauth2Client = new google.auth.OAuth2(
           process.env.GOOGLE_CLIENT_ID,
@@ -248,7 +267,7 @@ export const confirmMeeting = async (req, res) => {
 
         const event = {
           summary: meetingResult[0].title,
-          description: meetingResult[0].description || 'Scheduled via Meetrix',
+          description: aiNotes || meetingResult[0].description || 'Scheduled via Meetrix',
           start: { dateTime: new Date(finalStartTime).toISOString(), timeZone: 'UTC' },
           end: { dateTime: calculatedEndTime.toISOString(), timeZone: 'UTC' },
           attendees: meetingGuests.filter(g => g.email).map(g => ({ email: g.email })),
@@ -294,7 +313,7 @@ export const confirmMeeting = async (req, res) => {
 
     const confirmedMeeting = updatedMeetingResult[0];
 
-    sendMeetingConfirmation(confirmedMeeting, host, meetingGuests, meetLink);
+    sendMeetingConfirmation(confirmedMeeting, host, meetingGuests, meetLink, aiNotes);
     res.status(200).json({ 
       message: "Meeting officially confirmed!", 
       meeting: confirmedMeeting 
@@ -317,5 +336,161 @@ export const getAllHostMeetings = async (req, res) => {
   } catch (error) {
     console.error("Error fetching all meetings:", error);
     res.status(500).json({ error: "Failed to load your meetings" });
+  }
+};
+
+export const getSmartArbitrator = async (req, res) => {
+  try {
+    const { meetingId } = req.params;
+    const hostId = req.user.id;
+
+    console.log("🤖 Smart Arbitrator Request:", { meetingId, hostId });
+
+    // 1. Fetch meeting and verify ownership
+    const meetingResult = await db.select().from(meetings).where(eq(meetings.id, meetingId));
+    if (meetingResult.length === 0 || meetingResult[0].hostId !== hostId) {
+      return res.status(403).json({ error: "Unauthorized or meeting not found" });
+    }
+    const meeting = meetingResult[0];
+
+    // 2. Fetch all guests and their availabilities
+    const meetingGuests = await db.select().from(guests).where(eq(guests.meetingId, meetingId));
+    const allAvailabilities = await db.select().from(availabilities).where(eq(availabilities.meetingId, meetingId));
+
+    console.log(`📊 Meeting: ${meeting.title}, Guests: ${meetingGuests.length}, Availabilities: ${allAvailabilities.length}`);
+    console.log("👥 Guests:", meetingGuests.map(g => ({ id: g.id, name: g.name })));
+    console.log("📅 Availabilities:", allAvailabilities.map(a => ({ 
+      guestId: a.guestId, 
+      startTime: a.startTime, 
+      endTime: a.endTime 
+    })));
+    console.log("📆 Proposed Dates:", meeting.proposedDates);
+
+    // Early return if no guests have responded at all
+    if (allAvailabilities.length === 0) {
+      console.log("⚠️ No availability responses yet");
+      return res.status(200).json([{
+        suggestedStartTime: null,
+        attendeeCount: 0,
+        explanation: "No guests have responded with their availability yet. Please wait for responses before asking for suggestions.",
+        missingGuests: meetingGuests.map(g => g.name),
+        noData: true
+      }]);
+    }
+
+    // 3. Group availabilities by guest
+    const guestAvailabilityMap = {};
+    meetingGuests.forEach(guest => {
+      guestAvailabilityMap[guest.id] = {
+        name: guest.name,
+        availabilities: allAvailabilities
+          .filter(a => a.guestId === guest.id)
+          .map(a => ({ start: new Date(a.startTime).getTime(), end: new Date(a.endTime).getTime() }))
+      };
+    });
+
+    // 4. Generate candidate time slots from actual guest availability windows
+    //    Instead of hardcoded 8am-6pm (which has timezone issues), we derive
+    //    candidate start times from the actual availability data guests submitted.
+    const durationMs = meeting.durationMinutes * 60000;
+    const candidateStartsSet = new Set();
+
+    for (const avail of allAvailabilities) {
+      const availStartMs = new Date(avail.startTime).getTime();
+      const availEndMs = new Date(avail.endTime).getTime();
+      // Generate 30-min candidate slots within this availability window
+      for (let t = availStartMs; t + durationMs <= availEndMs; t += 30 * 60000) {
+        candidateStartsSet.add(t);
+      }
+    }
+
+    const timeSlots = [];
+    for (const startMs of candidateStartsSet) {
+      const slotEnd = startMs + durationMs;
+
+      let attendeeCount = 0;
+      const missingGuests = [];
+
+      for (const guest of meetingGuests) {
+        const guestAvail = guestAvailabilityMap[guest.id];
+
+        const canAttend = guestAvail.availabilities.length > 0 && guestAvail.availabilities.some(avail => {
+          return startMs >= avail.start && slotEnd <= avail.end;
+        });
+
+        if (canAttend) {
+          attendeeCount++;
+        } else {
+          missingGuests.push(guest.name);
+        }
+      }
+
+      timeSlots.push({
+        startMs,
+        attendeeCount,
+        missingGuests
+      });
+    }
+
+    // 5. Filter out slots with 0 attendees, then sort by attendee count (descending) and pick top 3
+    const slotsWithAttendees = timeSlots
+      .filter(s => s.attendeeCount > 0)
+      .sort((a, b) => b.attendeeCount - a.attendeeCount);
+
+    // Deduplicate: avoid suggesting slots that are very close in time (within 30 min of each other)
+    const topSlots = [];
+    for (const slot of slotsWithAttendees) {
+      const tooClose = topSlots.some(s => Math.abs(s.startMs - slot.startMs) < 30 * 60000);
+      if (!tooClose) {
+        topSlots.push(slot);
+      }
+      if (topSlots.length >= 3) break;
+    }
+
+    console.log(`✅ Found ${timeSlots.length} total slots, ${slotsWithAttendees.length} with attendees, returning top ${topSlots.length}`);
+
+    if (topSlots.length === 0) {
+      // All guests responded but no overlapping times found
+      return res.status(200).json([{
+        suggestedStartTime: null,
+        attendeeCount: 0,
+        explanation: "No overlapping availability found among the guests who responded. Consider proposing new dates or asking guests to expand their availability.",
+        missingGuests: meetingGuests.map(g => g.name),
+        noData: true
+      }]);
+    }
+
+    // 6. Use GenAI to generate explanations for top slots
+    const suggestions = [];
+    for (const slot of topSlots) {
+      const slotDate = new Date(slot.startMs);
+      let explanation = `${slot.attendeeCount} out of ${meetingGuests.length} guests can attend this time.`;
+      
+      try {
+        if (process.env.GOOGLE_API_KEY) {
+          const genai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+          const model = genai.getGenerativeModel({ model: "gemini-1.5-flash" });
+          
+          const prompt = `Generate a concise, polite 1-sentence explanation for why ${slotDate.toLocaleString()} is a good meeting time. ${slot.attendeeCount} out of ${meetingGuests.length} attendees can make it. Keep it under 20 words.`;
+          const result = await model.generateContent(prompt);
+          explanation = result.response.text().trim();
+        }
+      } catch (genaiError) {
+        console.log("⚠️ GenAI explanation generation skipped:", genaiError.message);
+      }
+
+      suggestions.push({
+        suggestedStartTime: slotDate.toISOString(),
+        attendeeCount: slot.attendeeCount,
+        missingGuests: slot.missingGuests.length > 0 ? slot.missingGuests : undefined,
+        explanation
+      });
+    }
+
+    console.log("🎯 Returning suggestions:", suggestions.length);
+    res.status(200).json(suggestions);
+  } catch (error) {
+    console.error("❌ Smart Arbitrator Error:", error);
+    res.status(500).json({ error: "Failed to analyze availability", details: error.message });
   }
 };
