@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Clock, CalendarDays, ArrowLeft } from "lucide-react";
+import { AppNavbar } from "@/components/AppNavbar";
 import { getMyMeetings, type MyMeeting } from "@/lib/api";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -82,58 +83,60 @@ const GlobalDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
-        <Loader2
-          className="h-10 w-10 animate-spin text-primary"
-          aria-label="Loading"
-        />
+      <div className="min-h-screen bg-background">
+        <AppNavbar />
+        <div className="flex min-h-screen items-center justify-center pt-24">
+          <Loader2
+            className="h-10 w-10 animate-spin text-primary"
+            aria-label="Loading"
+          />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-        <div className="max-w-md rounded-lg border border-border bg-background p-6 text-center shadow-sm">
+      <div className="min-h-screen bg-background">
+        <AppNavbar />
+        <div className="flex min-h-screen items-center justify-center p-6 pt-24">
+        <div className="max-w-md rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
           <p className="text-sm font-medium text-foreground">
             Could not load meetings
           </p>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+        </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
+    <div className="min-h-screen bg-background">
+      <AppNavbar />
+      <main className="mx-auto max-w-6xl px-4 pt-24 pb-10">
+        <div className="flex items-center gap-4 pb-8">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/")}
-            className="shrink-0"
+            className="shrink-0 rounded-full"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">
+            <h1 className="text-xl font-display font-bold tracking-tight text-foreground">
               My Meetings
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {meetings.length} meeting{meetings.length !== 1 ? "s" : ""} total
             </p>
           </div>
         </div>
-      </header>
-
-      {/* Body */}
-      <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Left: Calendar */}
           <div className="shrink-0">
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-border/50 shadow-sm rounded-2xl">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-primary" />
@@ -188,7 +191,7 @@ const GlobalDashboard = () => {
             </div>
 
             {filteredMeetings.length === 0 ? (
-              <Card className="border-dashed border-border/50">
+              <Card className="border-dashed border-border/50 rounded-2xl">
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <CalendarDays className="h-10 w-10 text-muted-foreground/40 mb-3" />
                   <p className="text-sm font-medium text-muted-foreground">
@@ -202,7 +205,7 @@ const GlobalDashboard = () => {
                   {!selectedDate && (
                     <Button
                       size="sm"
-                      className="mt-4"
+                      className="mt-4 rounded-full font-semibold"
                       onClick={() => navigate("/create")}
                     >
                       Create Meeting
@@ -215,7 +218,7 @@ const GlobalDashboard = () => {
                 {filteredMeetings.map((meeting) => (
                   <Card
                     key={meeting.id}
-                    className="group cursor-pointer border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5"
+                    className="group cursor-pointer border-border/50 shadow-sm rounded-2xl transition-all hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5"
                     onClick={() => navigate(`/meeting/${meeting.id}`)}
                   >
                     <CardContent className="p-4 space-y-3">

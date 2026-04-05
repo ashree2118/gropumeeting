@@ -101,19 +101,19 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
   };
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex min-h-screen bg-background pt-24">
       <div className="flex-1 p-6 lg:p-8 overflow-auto">
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground tracking-tight">
               Host Dashboard
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1 font-body">
               Review responses and confirm the best time
             </p>
           </div>
 
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50 shadow-sm rounded-2xl">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
@@ -142,7 +142,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
 
           {/* Finalized time banner */}
           {meeting.status === 'CONFIRMED' && meeting.finalStartTime && meeting.finalEndTime && (
-            <Card className="border-primary/30 bg-primary/5 shadow-sm">
+            <Card className="border-primary/30 bg-primary/5 shadow-sm rounded-2xl">
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
@@ -204,7 +204,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
                     </p>
                   </div>
 
-                  <Card className="border-primary/40 bg-primary/5 shadow-md">
+                  <Card className="border-primary/40 bg-primary/5 shadow-md rounded-2xl">
                     <CardContent className="pt-6 pb-6">
                       <div className="space-y-5">
                         <div className="flex items-start gap-4">
@@ -355,7 +355,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
             </div>
           )}
 
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
             <DashboardHeatmap
               proposedDates={proposedDates}
               guests={guests}

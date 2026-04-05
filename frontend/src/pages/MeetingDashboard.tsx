@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { AppNavbar } from "@/components/AppNavbar";
 import { getDashboardData, type DashboardData } from "@/lib/api";
 import HostDashboard from "@/components/HostDashboard";
 
@@ -44,18 +45,24 @@ const MeetingDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" aria-label="Loading" />
+      <div className="min-h-screen bg-background">
+        <AppNavbar />
+        <div className="flex min-h-screen items-center justify-center pt-24">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" aria-label="Loading" />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-        <div className="max-w-md rounded-lg border border-border bg-background p-6 text-center shadow-sm">
+      <div className="min-h-screen bg-background">
+        <AppNavbar />
+        <div className="flex min-h-screen items-center justify-center p-6 pt-24">
+        <div className="max-w-md rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
           <p className="text-sm font-medium text-foreground">Could not load dashboard</p>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+        </div>
         </div>
       </div>
     );
@@ -68,12 +75,15 @@ const MeetingDashboard = () => {
   const guestLink = `${window.location.origin}/m/${meeting.guestSlug}`;
 
   return (
-    <HostDashboard
-      meeting={meeting}
-      guests={guests}
-      guestLink={guestLink}
-      adminSlug={meetingId}
-    />
+    <>
+      <AppNavbar />
+      <HostDashboard
+        meeting={meeting}
+        guests={guests}
+        guestLink={guestLink}
+        adminSlug={meetingId}
+      />
+    </>
   );
 };
 

@@ -36,6 +36,7 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useMeetingStore } from "@/store/useMeetingStore";
+import { AppNavbar } from "@/components/AppNavbar";
 
 // ---------- State shape (Zustand-ready) ----------
 export interface MeetingFormState {
@@ -113,10 +114,12 @@ const MeetingWizard = () => {
   const isSuccess = step === 3;
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+    <>
+      <AppNavbar />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 pt-24 pb-12">
       <Card
         className={cn(
-          "w-full border-border/50 shadow-lg transition-all",
+          "w-full border-border/50 shadow-lg transition-all rounded-2xl",
           isSuccess ? "max-w-lg" : "max-w-xl"
         )}
       >
@@ -386,7 +389,8 @@ const MeetingWizard = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 };
 

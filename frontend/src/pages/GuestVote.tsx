@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getMeeting, submitVote, type MeetingForGuest } from "@/lib/api";
+import { AppNavbar } from "@/components/AppNavbar";
 
 const START_HOUR = 0;
 const SLOT_MINUTES = 30;
@@ -146,10 +147,13 @@ const GuestVote = () => {
 
   if (loadingMeeting) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm">Loading meeting…</p>
+      <div className="min-h-screen bg-background">
+        <AppNavbar />
+        <div className="flex min-h-screen items-center justify-center p-4 pt-24">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm">Loading meeting…</p>
+          </div>
         </div>
       </div>
     );
@@ -157,8 +161,10 @@ const GuestVote = () => {
 
   if (fetchFailed || !meeting) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-        <Card className="w-full max-w-md border-border/50 shadow-lg">
+      <div className="min-h-screen bg-background">
+        <AppNavbar />
+        <div className="flex min-h-screen items-center justify-center p-4 pt-24">
+        <Card className="w-full max-w-md border-border/50 shadow-lg rounded-2xl">
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Meeting Not Found or Link Expired</CardTitle>
             <CardDescription>
@@ -166,6 +172,7 @@ const GuestVote = () => {
             </CardDescription>
           </CardHeader>
         </Card>
+        </div>
       </div>
     );
   }
@@ -177,11 +184,12 @@ const GuestVote = () => {
     name.trim().length >= 2 && availabilities.length > 0 && !submitting;
 
   return (
-    <div className="min-h-screen bg-muted/30 p-4 pb-16">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pt-8">
+    <div className="min-h-screen bg-background">
+      <AppNavbar />
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 p-4 pb-16 pt-24">
         <header className="space-y-2 text-center sm:text-left">
-          <p className="text-sm font-medium text-primary">You&apos;re invited</p>
-          <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground">
+          <p className="text-sm font-semibold text-primary">You&apos;re invited</p>
+          <h1 className="text-balance text-3xl md:text-4xl font-display font-bold tracking-tight text-foreground">
             {meeting.title}
           </h1>
           {meeting.description ? (
@@ -196,9 +204,9 @@ const GuestVote = () => {
         </header>
 
         {!hasDates ? (
-          <Card className="border-border/50 shadow-md">
+          <Card className="border-border/50 shadow-md rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-lg">No dates to vote on</CardTitle>
+              <CardTitle className="text-lg font-display">No dates to vote on</CardTitle>
               <CardDescription>
                 The host has not proposed any days yet. Check back later.
               </CardDescription>
@@ -206,9 +214,9 @@ const GuestVote = () => {
           </Card>
         ) : (
           <>
-            <Card className="border-border/50 shadow-md">
+            <Card className="border-border/50 shadow-md rounded-2xl">
               <CardHeader>
-                <CardTitle className="text-lg">Your details</CardTitle>
+                <CardTitle className="text-lg font-display">Your details</CardTitle>
                 <CardDescription>
                   {isEditing
                     ? "Update your name or email if needed."
@@ -253,7 +261,7 @@ const GuestVote = () => {
             <div className="flex justify-center sm:justify-end">
               <Button
                 size="lg"
-                className="min-w-[200px]"
+                className="min-w-[200px] rounded-full font-semibold"
                 disabled={!canSubmit}
                 onClick={handleSubmit}
               >

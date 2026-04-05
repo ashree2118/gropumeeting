@@ -219,7 +219,7 @@ const AvailabilityGrid = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl shadow-lg border-border/50">
+    <Card className="w-full max-w-4xl shadow-lg border-border/50 rounded-2xl bg-card">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

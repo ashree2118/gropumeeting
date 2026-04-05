@@ -65,7 +65,7 @@ export default {
         },
       },
       fontFamily: {
-        display: ["'Nunito'", "sans-serif"],
+        display: ["'Manrope'", "sans-serif"],
         body: ["'Inter'", "sans-serif"],
       },
       borderRadius: {
