@@ -40,7 +40,11 @@ export function AppNavbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto flex items-center justify-between py-4 px-6">
         <Link to="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-          <CalendarDays className="h-7 w-7 text-foreground" />
+          <img
+            src={theme === "dark" ? "/logo_darktheme.svg" : "/logo_lighttheme.svg"}
+            alt="Meetrix Groups logo"
+            className="h-8 w-8"
+          />
           <span className="text-xl font-display font-bold text-foreground">Meetrix Groups</span>
         </Link>
 
