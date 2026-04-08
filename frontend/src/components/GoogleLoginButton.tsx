@@ -1,10 +1,11 @@
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { API_URL } from "@/lib/api";
 import { useAuthStore, type AuthUser } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 
-const AUTH_GOOGLE_URL = "http://localhost:5000/api/auth/google";
+const AUTH_GOOGLE_URL = `${API_URL}/auth/google`;
 
 export function GoogleLoginButton() {
   const navigate = useNavigate();
