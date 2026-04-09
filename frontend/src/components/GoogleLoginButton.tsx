@@ -50,9 +50,9 @@ export function GoogleLoginButton() {
 
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       size="lg"
-      className="w-full gap-2 rounded-full font-semibold border-2"
+      className="w-full gap-2"
       onClick={() => googleLogin()}
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24">

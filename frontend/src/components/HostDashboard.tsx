@@ -172,7 +172,8 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
             <Button
               onClick={handleAiSuggestions}
               disabled={isAiLoading}
-              className="gap-2 bg-gradient-to-r from-yellow-200 to-blue-300 text-black hover:from-yellow-300 hover:to-blue-400 shadow-md"
+              variant="secondary"
+              className="gap-2"
             >
               {isAiLoading ? (
                 <>
@@ -338,8 +339,9 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
 
                                 {/* Select Button */}
                                 <Button
+                                  variant="ghost"
                                   onClick={() => handleSelectTime(suggestion.suggestedStartTime)}
-                                  className="w-200 bg-yellow-200 hover:bg-yellow-100 text-black shadow-md"
+                                  className="bg-yellow-200 hover:bg-yellow-100 text-black shadow-md rounded-full"
                                 >
                                   Select this time
                                 </Button>

@@ -69,10 +69,10 @@ const Index = () => {
             </p>
             {isAuthenticated ? (
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                <Button className="rounded-full font-semibold" onClick={() => navigate("/dashboard")}>
+                <Button onClick={() => navigate("/dashboard")}>
                   Go to Dashboard
                 </Button>
-                <Button variant="outline" className="rounded-full font-semibold" onClick={() => navigate("/create")}>
+                <Button variant="secondary" onClick={() => navigate("/create")}>
                   Create Meeting
                 </Button>
               </div>

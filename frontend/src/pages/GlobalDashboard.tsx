@@ -205,7 +205,7 @@ const GlobalDashboard = () => {
                   {!selectedDate && (
                     <Button
                       size="sm"
-                      className="mt-4 rounded-full font-semibold"
+                      className="mt-4"
                       onClick={() => navigate("/create")}
                     >
                       Create Meeting

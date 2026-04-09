@@ -22,7 +22,7 @@ const HomeCta = ({ onCreateMeeting }: HomeCtaProps) => {
           <Button
             type="button"
             size="lg"
-            className="rounded-full px-6 sm:px-10 py-5 sm:py-7 text-sm sm:text-lg font-semibold shadow-xl shadow-primary/20"
+            className="px-6 sm:px-10 py-5 sm:py-7 text-sm sm:text-lg shadow-xl"
             onClick={onCreateMeeting}
           >
             Create Your First Group Meeting for Free

@@ -12,6 +12,8 @@ import GlobalDashboard from "./pages/GlobalDashboard";
 import CreateMeeting from "./pages/CreateMeeting";
 import NotFound from "./pages/NotFound";
 import GuestVote from "./pages/GuestVote";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,8 @@ const App = () => (
           <div className="pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/m/:guestSlug" element={<GuestVote />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/meeting/:meetingId" element={<MeetingDashboard />} />

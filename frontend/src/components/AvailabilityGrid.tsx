@@ -236,7 +236,6 @@ const AvailabilityGrid = ({
             </div>
             <div>
               <CardTitle className="text-xl">Select Your Availability</CardTitle>
-              <CardDescription>Click and drag to mark when you're free</CardDescription>
             </div>
           </div>
           <Button

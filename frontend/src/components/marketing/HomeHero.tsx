@@ -12,20 +12,12 @@ const HomeHero = ({ onCreateMeeting, onSeeHowItWorks }: HomeHeroProps) => {
   return (
     <section className="pt-24 md:pt-28 pb-14 md:pb-20 px-4 sm:px-6">
       <div className="container mx-auto text-center max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="inline-block mb-4 px-4 py-1.5 rounded-full bg-card-yellow text-sm font-medium text-foreground"
-        >
-          Your group meeting scheduler
-        </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-3xl sm:text-5xl md:text-7xl font-display font-bold text-foreground leading-tight mb-6"
+          className="text-4xl sm:text-5xl md:text-7xl font-display font-bold text-foreground leading-tight my-6"
         >
           Group Meetings,
           <br />
@@ -38,7 +30,7 @@ const HomeHero = ({ onCreateMeeting, onSeeHowItWorks }: HomeHeroProps) => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 md:mb-10 font-body leading-relaxed"
         >
-          The one-link scheduler where everyone paints their availability. No back-and-forth — just share, paint, and meet.
+          The one-link scheduler where everyone paints their availability. No back-and-forth — just share, select availability, and meet.
         </motion.p>
 
         <motion.div
@@ -50,13 +42,13 @@ const HomeHero = ({ onCreateMeeting, onSeeHowItWorks }: HomeHeroProps) => {
           <Button
             type="button"
             size="lg"
-            className="rounded-full px-8 py-6 text-base font-semibold shadow-lg shadow-primary/20"
+            className="px-8 py-6 text-base"
             onClick={onCreateMeeting}
           >
             Create a Free Meeting
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
-          <Button type="button" variant="outline" size="lg" className="rounded-full px-8 py-6 text-base font-semibold" onClick={onSeeHowItWorks}>
+          <Button type="button" variant="secondary" size="lg" className="px-8 py-6 text-base" onClick={onSeeHowItWorks}>
             See How It Works
           </Button>
         </motion.div>

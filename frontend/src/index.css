@@ -123,3 +123,70 @@
     font-family: "Inter", sans-serif;
   }
 }
+
+/* ─── Gradient Button: Primary (Black fill, gradient border via background-clip) ─── */
+.btn-gradient-primary {
+  border: 4px solid transparent !important;
+  border-radius: 9999px !important;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #B6EDFD 0%, #b8f5c8 30%, #e8f5a0 60%, #f5f0a0 100%) border-box !important;
+  color: #fff !important;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-gradient-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(160, 240, 237, 0.3), 0 2px 4px rgba(245, 240, 160, 0.2);
+}
+
+.btn-gradient-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Gradient Button: Secondary (Gradient fill, white border) ─── */
+.btn-gradient-secondary {
+  border-radius: 9999px !important;
+  background: linear-gradient(135deg, #c4f5f0 0%, #d8f8e0 30%, #f0f8c0 60%, #f8f4b0 100%) !important;
+  color: #111 !important;
+  font-weight: 600;
+  border: 3px solid rgba(255, 255, 255, 0.85) !important;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.btn-gradient-secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(160, 240, 237, 0.2), 0 2px 8px rgba(245, 240, 160, 0.15);
+  border-color: rgba(255, 255, 255, 1) !important;
+}
+
+.btn-gradient-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Dark theme adjustments */
+.dark .btn-gradient-primary {
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #B6EDFD 0%, #b8f5c8 30%, #e8f5a0 60%, #f5f0a0 100%) border-box !important;
+  color: #fff !important;
+}
+
+.dark .btn-gradient-secondary {
+  background: linear-gradient(135deg, #7dd8d0 0%, #9fd8a8 30%, #d0d880 60%, #d8d070 100%) !important;
+  color: #111 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.dark .btn-gradient-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}

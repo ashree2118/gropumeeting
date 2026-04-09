@@ -320,7 +320,7 @@ const MeetingWizard = () => {
               </div>
 
               <Button
-                variant="outline"
+                variant="secondary"
                 className="w-full gap-2"
                 onClick={() => {
                   if (adminLink) {
@@ -341,7 +341,7 @@ const MeetingWizard = () => {
           {!isSuccess && (
             <div className="flex justify-between pt-4 border-t">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => setStep((s) => s - 1)}
                 disabled={step === 1}
                 className="gap-1"

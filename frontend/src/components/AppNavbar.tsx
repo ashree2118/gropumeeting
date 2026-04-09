@@ -76,7 +76,7 @@ export function AppNavbar() {
           <button type="button" onClick={toggle} className="p-2 rounded-full hover:bg-secondary transition-colors" aria-label="Toggle theme">
             {theme === "light" ? <Moon className="h-5 w-5 text-foreground" /> : <Sun className="h-5 w-5 text-foreground" />}
           </button>
-          <Button type="button" className="rounded-full px-6 font-semibold" onClick={handleCreateMeeting}>
+          <Button type="button" className="px-6" onClick={handleCreateMeeting}>
             Create Meeting
           </Button>
         </div>
@@ -112,7 +112,7 @@ export function AppNavbar() {
             {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             {theme === "light" ? "Dark Mode" : "Light Mode"}
           </button>
-          <Button type="button" className="rounded-full px-6 font-semibold w-fit" onClick={handleCreateMeeting}>
+          <Button type="button" className="px-6 w-fit" onClick={handleCreateMeeting}>
             Create Meeting
           </Button>
         </div>

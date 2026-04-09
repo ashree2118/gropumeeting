@@ -261,7 +261,7 @@ const GuestVote = () => {
             <div className="flex justify-center sm:justify-end">
               <Button
                 size="lg"
-                className="min-w-[200px] rounded-full font-semibold"
+                className="min-w-[200px]"
                 disabled={!canSubmit}
                 onClick={handleSubmit}
               >
