@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import BottomNavbar from "@/components/BottomNavbar";
 import Index from "./pages/Index";
 import MeetingDashboard from "./pages/MeetingDashboard";
 import GlobalDashboard from "./pages/GlobalDashboard";
@@ -21,17 +22,20 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/m/:guestSlug" element={<GuestVote />} />
-            <Route element={<ProtectedRoute />}>
-              <Route path="/meeting/:meetingId" element={<MeetingDashboard />} />
-              <Route path="/dashboard" element={<GlobalDashboard />} />
-              <Route path="/create" element={<CreateMeeting />} />
-            </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="pb-16 md:pb-0">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/m/:guestSlug" element={<GuestVote />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/meeting/:meetingId" element={<MeetingDashboard />} />
+                <Route path="/dashboard" element={<GlobalDashboard />} />
+                <Route path="/create" element={<CreateMeeting />} />
+              </Route>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
+          <BottomNavbar />
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

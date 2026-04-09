@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, RotateCcw } from "lucide-react";
 
-const DEFAULT_DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const DEFAULT_DAY_LABELS = ["M", "T", "W", "T", "F"];
 const START_HOUR = 0;
 const END_HOUR = 24;
 const SLOTS_PER_HOUR = 2;
 const SLOT_MINUTES = 30;
 export const GRID_TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;
+/** Number of half-hour slots in AM (12:00 AM → 11:30 AM = 24 slots) */
+const AM_SLOTS = 12 * SLOTS_PER_HOUR;
 
 function formatTime(slotIndex: number) {
   const totalMinutes = START_HOUR * 60 + slotIndex * SLOT_MINUTES;
@@ -138,9 +140,15 @@ const AvailabilityGrid = ({
 
   const columnLabels = useMemo(() => {
     if (proposedDates?.length) {
-      return proposedDates.map((d) =>
-        format(parse(d, "yyyy-MM-dd", new Date()), "EEE MMM d")
-      );
+      // Short mobile-friendly labels: "M 7", "Tu 8", etc.
+      const SHORT_DAYS: Record<string, string> = {
+        Mon: "M", Tue: "Tu", Wed: "W", Thu: "Th", Fri: "F", Sat: "Sa", Sun: "Su",
+      };
+      return proposedDates.map((d) => {
+        const date = parse(d, "yyyy-MM-dd", new Date());
+        const dayAbbr = SHORT_DAYS[format(date, "EEE")] ?? format(date, "EEE");
+        return `${dayAbbr} ${format(date, "d")}`;
+      });
     }
     return DEFAULT_DAY_LABELS;
   }, [proposedDates]);
@@ -243,104 +251,192 @@ const AvailabilityGrid = ({
         </div>
       </CardHeader>
       <CardContent>
+        {/* Legend — moved to top */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded-sm bg-primary/85" />
+            Available
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded-sm bg-background border border-border" />
+            Unavailable
+          </div>
+          {pastCells.size > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="h-3 w-3 rounded-sm bg-muted/40 opacity-40 border border-border" />
+              Past
+            </div>
+          )}
+          {hostBusyTimes.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="h-3 w-3 rounded-sm bg-destructive/15 opacity-50 border border-destructive/30" />
+              Host busy
+            </div>
+          )}
+        </div>
+
+        {/* AM / PM split grid */}
         <div
           ref={gridRef}
-          className="select-none overflow-x-auto"
+          className="select-none"
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >
-          <div
-            className="grid gap-px mb-px"
-            style={{ gridTemplateColumns }}
-          >
-            <div className="h-10" />
-            {columnLabels.map((label, i) => (
+          <div className="grid grid-cols-2 gap-4">
+            {/* ---- AM Panel ---- */}
+            <div className="overflow-x-auto">
+              {/* Column headers */}
               <div
-                key={`col-${i}`}
-                className="h-10 flex items-center justify-center text-center px-1 text-xs font-semibold text-foreground sm:text-sm"
+                className="grid gap-px mb-px"
+                style={{ gridTemplateColumns }}
               >
-                {label}
+                <div className="h-10" />
+                {columnLabels.map((label, i) => (
+                  <div
+                    key={`am-col-${i}`}
+                    className="h-10 flex items-center justify-center text-center px-1 text-xs font-semibold text-foreground sm:text-sm"
+                  >
+                    {label}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div
-            className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60 max-h-[500px] overflow-y-auto"
-            style={{ gridTemplateColumns }}
-          >
-            {Array.from({ length: GRID_TOTAL_SLOTS }, (_, slotIdx) => (
-              <div key={`slot-row-${slotIdx}`} className="contents">
-                <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
-                  {slotIdx % SLOTS_PER_HOUR === 0 && (
-                    <span className="text-[11px] text-muted-foreground font-medium">
-                      {formatTime(slotIdx)}
-                    </span>
-                  )}
-                </div>
-                {Array.from({ length: numDays }, (_, dayIdx) => {
-                  const cellKey: CellKey = `${dayIdx}-${slotIdx}`;
-                  const busy = busyCells.has(cellKey);
-                  const past = pastCells.has(cellKey);
-                  const active = isCellActive(dayIdx, slotIdx);
-                  const preview = isCellPreview(dayIdx, slotIdx);
-                  const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
+              {/* AM rows: slots 0–23 (12:00 AM – 11:30 AM) */}
+              <div
+                className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60"
+                style={{ gridTemplateColumns }}
+              >
+                {Array.from({ length: AM_SLOTS }, (_, slotIdx) => (
+                  <div key={`am-row-${slotIdx}`} className="contents">
+                    <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
+                      {slotIdx % SLOTS_PER_HOUR === 0 && (
+                        <span className="text-[11px] text-muted-foreground font-medium">
+                          {formatTime(slotIdx)}
+                        </span>
+                      )}
+                    </div>
+                    {Array.from({ length: numDays }, (_, dayIdx) => {
+                      const cellKey: CellKey = `${dayIdx}-${slotIdx}`;
+                      const busy = busyCells.has(cellKey);
+                      const past = pastCells.has(cellKey);
+                      const active = isCellActive(dayIdx, slotIdx);
+                      const preview = isCellPreview(dayIdx, slotIdx);
+                      const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
+                      return (
+                        <div
+                          key={cellKey}
+                          className={[
+                            "h-5 transition-colors duration-75",
+                            isHourStart ? "border-t border-border/40" : "",
+                            past
+                              ? "bg-muted/40 cursor-not-allowed opacity-40"
+                              : busy
+                                ? "bg-destructive/15 cursor-not-allowed opacity-50"
+                                : active
+                                  ? preview
+                                    ? "bg-primary/70 cursor-pointer"
+                                    : "bg-primary/85 cursor-pointer"
+                                  : preview && dragMode === "remove"
+                                    ? "bg-destructive/20 cursor-pointer"
+                                    : "bg-background hover:bg-muted/60 cursor-pointer",
+                          ].join(" ")}
+                          style={
+                            busy && !past
+                              ? {
+                                  backgroundImage:
+                                    "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(239,68,68,0.12) 3px, rgba(239,68,68,0.12) 5px)",
+                                }
+                              : undefined
+                          }
+                          title={past ? "Past" : busy ? "Host is busy" : undefined}
+                          onPointerDown={() => handlePointerDown(dayIdx, slotIdx)}
+                          onPointerEnter={() => handlePointerEnter(dayIdx, slotIdx)}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ---- PM Panel ---- */}
+            <div className="overflow-x-auto">
+              {/* Column headers */}
+              <div
+                className="grid gap-px mb-px"
+                style={{ gridTemplateColumns }}
+              >
+                <div className="h-10" />
+                {columnLabels.map((label, i) => (
+                  <div
+                    key={`pm-col-${i}`}
+                    className="h-10 flex items-center justify-center text-center px-1 text-xs font-semibold text-foreground sm:text-sm"
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* PM rows: slots 24–47 (12:00 PM – 11:30 PM) */}
+              <div
+                className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60"
+                style={{ gridTemplateColumns }}
+              >
+                {Array.from({ length: GRID_TOTAL_SLOTS - AM_SLOTS }, (_, i) => {
+                  const slotIdx = AM_SLOTS + i;
                   return (
-                    <div
-                      key={cellKey}
-                      className={[
-                        "h-5 transition-colors duration-75",
-                        isHourStart ? "border-t border-border/40" : "",
-                        past
-                          ? "bg-muted/40 cursor-not-allowed opacity-40"
-                          : busy
-                            ? "bg-destructive/15 cursor-not-allowed opacity-50"
-                            : active
-                              ? preview
-                                ? "bg-primary/70 cursor-pointer"
-                                : "bg-primary/85 cursor-pointer"
-                              : preview && dragMode === "remove"
-                                ? "bg-destructive/20 cursor-pointer"
-                                : "bg-background hover:bg-muted/60 cursor-pointer",
-                      ].join(" ")}
-                      style={
-                        busy && !past
-                          ? {
-                              backgroundImage:
-                                "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(239,68,68,0.12) 3px, rgba(239,68,68,0.12) 5px)",
+                    <div key={`pm-row-${slotIdx}`} className="contents">
+                      <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
+                        {slotIdx % SLOTS_PER_HOUR === 0 && (
+                          <span className="text-[11px] text-muted-foreground font-medium">
+                            {formatTime(slotIdx)}
+                          </span>
+                        )}
+                      </div>
+                      {Array.from({ length: numDays }, (_, dayIdx) => {
+                        const cellKey: CellKey = `${dayIdx}-${slotIdx}`;
+                        const busy = busyCells.has(cellKey);
+                        const past = pastCells.has(cellKey);
+                        const active = isCellActive(dayIdx, slotIdx);
+                        const preview = isCellPreview(dayIdx, slotIdx);
+                        const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
+                        return (
+                          <div
+                            key={cellKey}
+                            className={[
+                              "h-5 transition-colors duration-75",
+                              isHourStart ? "border-t border-border/40" : "",
+                              past
+                                ? "bg-muted/40 cursor-not-allowed opacity-40"
+                                : busy
+                                  ? "bg-destructive/15 cursor-not-allowed opacity-50"
+                                  : active
+                                    ? preview
+                                      ? "bg-primary/70 cursor-pointer"
+                                      : "bg-primary/85 cursor-pointer"
+                                    : preview && dragMode === "remove"
+                                      ? "bg-destructive/20 cursor-pointer"
+                                      : "bg-background hover:bg-muted/60 cursor-pointer",
+                            ].join(" ")}
+                            style={
+                              busy && !past
+                                ? {
+                                    backgroundImage:
+                                      "repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(239,68,68,0.12) 3px, rgba(239,68,68,0.12) 5px)",
+                                  }
+                                : undefined
                             }
-                          : undefined
-                      }
-                      title={past ? "Past" : busy ? "Host is busy" : undefined}
-                      onPointerDown={() => handlePointerDown(dayIdx, slotIdx)}
-                      onPointerEnter={() => handlePointerEnter(dayIdx, slotIdx)}
-                    />
+                            title={past ? "Past" : busy ? "Host is busy" : undefined}
+                            onPointerDown={() => handlePointerDown(dayIdx, slotIdx)}
+                            onPointerEnter={() => handlePointerEnter(dayIdx, slotIdx)}
+                          />
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-sm bg-primary/85" />
-              Available
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-sm bg-background border border-border" />
-              Unavailable
-            </div>
-            {pastCells.size > 0 && (
-              <div className="flex items-center gap-1.5">
-                <div className="h-3 w-3 rounded-sm bg-muted/40 opacity-40 border border-border" />
-                Past
-              </div>
-            )}
-            {hostBusyTimes.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <div className="h-3 w-3 rounded-sm bg-destructive/15 opacity-50 border border-destructive/30" />
-                Host busy
-              </div>
-            )}
           </div>
         </div>
 

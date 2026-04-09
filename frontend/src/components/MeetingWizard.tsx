@@ -30,6 +30,7 @@ import {
   ExternalLink,
   LayoutDashboard,
   Loader2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -119,10 +120,19 @@ const MeetingWizard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4 pt-24 pb-12">
       <Card
         className={cn(
-          "w-full border-border/50 shadow-lg transition-all rounded-2xl",
+          "w-full border-border/50 shadow-lg transition-all rounded-2xl relative",
           isSuccess ? "max-w-lg" : "max-w-xl"
         )}
       >
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="absolute top-4 right-4 z-10 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Step indicator (hidden on success) */}
         {!isSuccess && (
           <CardHeader className="pb-4">

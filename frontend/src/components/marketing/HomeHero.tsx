@@ -18,7 +18,7 @@ const HomeHero = ({ onCreateMeeting, onSeeHowItWorks }: HomeHeroProps) => {
           transition={{ duration: 0.5 }}
           className="inline-block mb-4 px-4 py-1.5 rounded-full bg-card-yellow text-sm font-medium text-foreground"
         >
-          ✨ Paint-your-availability scheduling
+          Your group meeting scheduler
         </motion.div>
 
         <motion.h1
