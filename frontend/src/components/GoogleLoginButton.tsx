@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useAuthStore, type AuthUser } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
 
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") ?? "";
+const API_URL = "https://meetrix.anushreesh.com/api";
 const AUTH_GOOGLE_URL = `${API_URL}/auth/google`;
 
 export function GoogleLoginButton() {

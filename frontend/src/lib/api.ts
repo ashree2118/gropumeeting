@@ -1,6 +1,7 @@
 import { getStoredAuthToken } from "@/store/useAuthStore";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") ?? "";
+const API_URL = "https://meetrix.anushreesh.com/api";
+const API_BASE_URL = API_URL;
 
 function jsonHeadersWithAuth(): HeadersInit {
   const token = getStoredAuthToken();
