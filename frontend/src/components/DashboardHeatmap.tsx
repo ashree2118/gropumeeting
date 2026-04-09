@@ -11,6 +11,7 @@ const END_HOUR = 24;
 const SLOTS_PER_HOUR = 2;
 const SLOT_MINUTES = 30;
 const TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;
+const AM_SLOTS = 12 * SLOTS_PER_HOUR;
 
 function formatTime(slotIndex: number) {
   const totalMinutes = START_HOUR * 60 + slotIndex * SLOT_MINUTES;
@@ -170,75 +171,154 @@ const DashboardHeatmap = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="select-none overflow-x-auto">
-          <div
-            className="grid gap-px mb-px"
-            style={{
-              gridTemplateColumns: `56px repeat(${numDays}, minmax(0, 1fr))`,
-            }}
-          >
-            <div />
-            {columnLabels.map((label, i) => (
+        <div className="select-none">
+          <div className="grid grid-cols-2 gap-4">
+            {/* ---- AM Panel ---- */}
+            <div className="overflow-x-auto">
               <div
-                key={normalizedDates[i]}
-                className="h-9 flex items-center justify-center text-xs font-semibold text-foreground"
+                className="grid gap-px mb-px"
+                style={{
+                  gridTemplateColumns: `56px repeat(${numDays}, minmax(0, 1fr))`,
+                }}
               >
-                <span className="hidden sm:inline">{label}</span>
-                <span className="sm:hidden">{columnLabelsShort[i]}</span>
+                <div />
+                {columnLabels.map((label, i) => (
+                  <div
+                    key={`am-${normalizedDates[i]}`}
+                    className="h-9 flex items-center justify-center text-xs font-semibold text-foreground"
+                  >
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sm:hidden">{columnLabelsShort[i]}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div
-            className="grid gap-px bg-border/50 rounded-lg overflow-hidden border border-border/50"
-            style={{
-              gridTemplateColumns: `56px repeat(${numDays}, minmax(0, 1fr))`,
-            }}
-          >
-            {Array.from({ length: TOTAL_SLOTS }, (_, slotIdx) => (
-              <div key={slotIdx} className="contents">
-                <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
-                  {slotIdx % SLOTS_PER_HOUR === 0 && (
-                    <span className="text-[10px] text-muted-foreground font-medium leading-none">
-                      {formatTime(slotIdx)}
-                    </span>
-                  )}
-                </div>
-                {normalizedDates.map((_, dayIdx) => {
-                  const v = votes[slotIdx][dayIdx];
-                  const isSelected =
-                    selectedSlot?.day === dayIdx && selectedSlot?.slot === slotIdx;
-                  const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
-
-                  return (
-                    <div
-                      key={`${dayIdx}-${slotIdx}`}
-                      className={[
-                        "h-5 cursor-pointer transition-all duration-100 relative group",
-                        isHourStart ? "border-t border-border/30" : "",
-                        heatColor(v, maxVotes),
-                        isSelected
-                          ? "ring-2 ring-primary ring-offset-1 z-10 rounded-sm"
-                          : "",
-                      ].join(" ")}
-                      onClick={() =>
-                        setSelectedSlot(
-                          isSelected ? null : { day: dayIdx, slot: slotIdx }
-                        )
-                      }
-                    >
-                      {v > 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span className="text-[9px] font-bold text-primary-foreground drop-shadow-sm">
-                            {v}
-                          </span>
-                        </div>
+              <div
+                className="grid gap-px bg-border/50 rounded-lg overflow-hidden border border-border/50"
+                style={{
+                  gridTemplateColumns: `56px repeat(${numDays}, minmax(0, 1fr))`,
+                }}
+              >
+                {Array.from({ length: AM_SLOTS }, (_, slotIdx) => (
+                  <div key={slotIdx} className="contents">
+                    <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
+                      {slotIdx % SLOTS_PER_HOUR === 0 && (
+                        <span className="text-[10px] text-muted-foreground font-medium leading-none">
+                          {formatTime(slotIdx)}
+                        </span>
                       )}
+                    </div>
+                    {normalizedDates.map((_, dayIdx) => {
+                      const v = votes[slotIdx][dayIdx];
+                      const isSelected =
+                        selectedSlot?.day === dayIdx && selectedSlot?.slot === slotIdx;
+                      const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
+                      return (
+                        <div
+                          key={`${dayIdx}-${slotIdx}`}
+                          className={[
+                            "h-5 cursor-pointer transition-all duration-100 relative group",
+                            isHourStart ? "border-t border-border/30" : "",
+                            heatColor(v, maxVotes),
+                            isSelected
+                              ? "ring-2 ring-primary ring-offset-1 z-10 rounded-sm"
+                              : "",
+                          ].join(" ")}
+                          onClick={() =>
+                            setSelectedSlot(
+                              isSelected ? null : { day: dayIdx, slot: slotIdx }
+                            )
+                          }
+                        >
+                          {v > 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[9px] font-bold text-primary-foreground drop-shadow-sm">
+                                {v}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ---- PM Panel ---- */}
+            <div className="overflow-x-auto">
+              <div
+                className="grid gap-px mb-px"
+                style={{
+                  gridTemplateColumns: `56px repeat(${numDays}, minmax(0, 1fr))`,
+                }}
+              >
+                <div />
+                {columnLabels.map((label, i) => (
+                  <div
+                    key={`pm-${normalizedDates[i]}`}
+                    className="h-9 flex items-center justify-center text-xs font-semibold text-foreground"
+                  >
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sm:hidden">{columnLabelsShort[i]}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="grid gap-px bg-border/50 rounded-lg overflow-hidden border border-border/50"
+                style={{
+                  gridTemplateColumns: `56px repeat(${numDays}, minmax(0, 1fr))`,
+                }}
+              >
+                {Array.from({ length: TOTAL_SLOTS - AM_SLOTS }, (_, i) => {
+                  const slotIdx = AM_SLOTS + i;
+                  return (
+                    <div key={slotIdx} className="contents">
+                      <div className="bg-background flex items-start justify-end pr-2 pt-0.5">
+                        {slotIdx % SLOTS_PER_HOUR === 0 && (
+                          <span className="text-[10px] text-muted-foreground font-medium leading-none">
+                            {formatTime(slotIdx)}
+                          </span>
+                        )}
+                      </div>
+                      {normalizedDates.map((_, dayIdx) => {
+                        const v = votes[slotIdx][dayIdx];
+                        const isSelected =
+                          selectedSlot?.day === dayIdx && selectedSlot?.slot === slotIdx;
+                        const isHourStart = slotIdx % SLOTS_PER_HOUR === 0;
+                        return (
+                          <div
+                            key={`${dayIdx}-${slotIdx}`}
+                            className={[
+                              "h-5 cursor-pointer transition-all duration-100 relative group",
+                              isHourStart ? "border-t border-border/30" : "",
+                              heatColor(v, maxVotes),
+                              isSelected
+                                ? "ring-2 ring-primary ring-offset-1 z-10 rounded-sm"
+                                : "",
+                            ].join(" ")}
+                            onClick={() =>
+                              setSelectedSlot(
+                                isSelected ? null : { day: dayIdx, slot: slotIdx }
+                              )
+                            }
+                          >
+                            {v > 0 && (
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[9px] font-bold text-primary-foreground drop-shadow-sm">
+                                  {v}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
               </div>
-            ))}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 mt-4 text-[11px] text-muted-foreground">

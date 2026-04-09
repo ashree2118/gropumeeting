@@ -172,7 +172,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
             <Button
               onClick={handleAiSuggestions}
               disabled={isAiLoading}
-              className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              className="gap-2 bg-gradient-to-r from-yellow-200 to-blue-300 text-black hover:from-yellow-300 hover:to-blue-400 shadow-md"
             >
               {isAiLoading ? (
                 <>
@@ -237,7 +237,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
                             disabled={isConfirming}
                           >
                             <ArrowLeft className="h-4 w-4" />
-                            Back to suggestions
+                            See suggestions
                           </Button>
                           <Button
                             className="gap-2 flex-1"
@@ -266,19 +266,19 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
                 <>
                   <div>
                     <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-purple-600" />
+                      <Sparkles className="h-5 w-5 text-blue-400" />
                       AI Suggestions
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1">
                       Smart scheduling powered by AI analysis
                     </p>
                   </div>
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     {aiSuggestions[0]?.noData ? (
-                      <Card className="border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-orange-50/50 shadow-sm">
+                      <Card className="border-border bg-muted/50 shadow-sm">
                         <CardContent className="pt-6">
                           <div className="flex items-start gap-3">
-                            <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                            <Clock className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
                             <div className="space-y-2">
                               <p className="text-sm font-medium text-foreground">
                                 {aiSuggestions[0].explanation}
@@ -299,7 +299,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
                             meeting.durationMinutes * 60000
                         );
                         return (
-                          <Card key={idx} className="border-purple-200/50 bg-gradient-to-br from-purple-50/50 to-pink-50/50 shadow-sm hover:shadow-md transition-shadow">
+                          <Card key={idx} className="border-border bg-card shadow-sm hover:shadow-md transition-shadow">
                             <CardContent className="pt-6">
                               <div className="space-y-4">
                                 {/* Time Display */}
@@ -328,8 +328,8 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
 
                                 {/* Missing Guests */}
                                 {suggestion.missingGuests && suggestion.missingGuests.length > 0 && (
-                                  <div className="px-3 py-2.5 rounded-lg bg-red-50/70 border border-red-200/70">
-                                    <p className="text-sm font-medium text-red-900 flex items-center gap-2">
+                                  <div className="px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
+                                    <p className="text-sm font-medium text-destructive flex items-center gap-2">
                                       <Clock className="h-3.5 w-3.5" />
                                       Missing: {suggestion.missingGuests.join(", ")}
                                     </p>
@@ -339,7 +339,7 @@ const HostDashboard = ({ meeting, guests, guestLink, adminSlug }: HostDashboardP
                                 {/* Select Button */}
                                 <Button
                                   onClick={() => handleSelectTime(suggestion.suggestedStartTime)}
-                                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                  className="w-200 bg-yellow-200 hover:bg-yellow-100 text-black shadow-md"
                                 >
                                   Select this time
                                 </Button>
