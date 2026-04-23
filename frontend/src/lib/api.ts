@@ -3,6 +3,7 @@ import { getStoredAuthToken } from "@/store/useAuthStore";
 const API_URL = "https://meetrix.anushreesh.com/api";
 const API_BASE_URL = API_URL;
 
+//Get token, attach Authorization header, add Content-Type
 function jsonHeadersWithAuth(): HeadersInit {
   const token = getStoredAuthToken();
   const headers: Record<string, string> = {

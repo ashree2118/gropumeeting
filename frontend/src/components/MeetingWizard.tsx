@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { AppNavbar } from "@/components/AppNavbar";
 
-// ---------- State shape (Zustand-ready) ----------
+// ---------- State shape ----------
 export interface MeetingFormState {
   title: string;
   description: string;

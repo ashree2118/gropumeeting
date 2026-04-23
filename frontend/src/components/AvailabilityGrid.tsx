@@ -10,7 +10,6 @@ const END_HOUR = 24;
 const SLOTS_PER_HOUR = 2;
 const SLOT_MINUTES = 30;
 export const GRID_TOTAL_SLOTS = (END_HOUR - START_HOUR) * SLOTS_PER_HOUR;
-/** Number of half-hour slots in AM (12:00 AM → 11:30 AM = 24 slots) */
 const AM_SLOTS = 12 * SLOTS_PER_HOUR;
 
 function formatTime(slotIndex: number) {
@@ -61,18 +60,16 @@ function selectedCellsToAvailabilities(
 }
 
 export interface AvailabilityGridProps {
-  /** When set, columns match these calendar dates (`yyyy-MM-dd`); otherwise Mon–Fri placeholders. */
+  // When set, columns match these calendar dates (`yyyy-MM-dd`); otherwise Mon–Fri placeholders.
   proposedDates?: string[];
   onAvailabilitiesChange?: (availabilities: AvailabilitySlot[]) => void;
-  /** Hide the built-in submit row (e.g. when parent provides the submit button). */
-  showFooterSubmit?: boolean;
-  /** Pre-populate selected cells (e.g. when editing an existing vote). Keys are "dayIdx-slotIdx". */
+  // Hide the built-in submit row (e.g. when parent provides the submit button). 
+  showFooterSubmit?: boolean; 
   initialSelected?: Set<string>;
-  /** Host's busy times from Google Calendar — cells overlapping these are blocked. */
   hostBusyTimes?: { start: string; end: string }[];
 }
 
-/** Convert hostBusyTimes into a Set<CellKey> for O(1) lookups. */
+// hostBusyTimes into a Set<CellKey> for O(1) lookups.
 function buildBusyCellSet(
   busyTimes: { start: string; end: string }[],
   proposedDates: string[]
@@ -81,7 +78,7 @@ function buildBusyCellSet(
   for (const block of busyTimes) {
     const bStart = new Date(block.start).getTime();
     const bEnd = new Date(block.end).getTime();
-    // Walk every proposed date + every slot and check overlap
+    // Walk every proposed date + every slot 
     for (let dayIdx = 0; dayIdx < proposedDates.length; dayIdx++) {
       const [y, mo, d] = proposedDates[dayIdx].split("-").map(Number);
       for (let slotIdx = 0; slotIdx < GRID_TOTAL_SLOTS; slotIdx++) {
@@ -140,9 +137,8 @@ const AvailabilityGrid = ({
 
   const columnLabels = useMemo(() => {
     if (proposedDates?.length) {
-      // Short mobile-friendly labels: "M 7", "Tu 8", etc.
       const SHORT_DAYS: Record<string, string> = {
-        Mon: "M", Tue: "Tu", Wed: "W", Thu: "Th", Fri: "F", Sat: "Sa", Sun: "Su",
+        Mon: "Mon", Tue: "Tue", Wed: "Wed", Thu: "Thu", Fri: "Fri", Sat: "Sat", Sun: "Sun",
       };
       return proposedDates.map((d) => {
         const date = parse(d, "yyyy-MM-dd", new Date());
@@ -250,7 +246,6 @@ const AvailabilityGrid = ({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Legend — moved to top */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-sm bg-primary/85" />
@@ -284,7 +279,6 @@ const AvailabilityGrid = ({
           <div className="grid grid-cols-2 gap-4">
             {/* ---- AM Panel ---- */}
             <div className="overflow-x-auto">
-              {/* Column headers */}
               <div
                 className="grid gap-px mb-px"
                 style={{ gridTemplateColumns }}
@@ -299,8 +293,6 @@ const AvailabilityGrid = ({
                   </div>
                 ))}
               </div>
-
-              {/* AM rows: slots 0–23 (12:00 AM – 11:30 AM) */}
               <div
                 className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60"
                 style={{ gridTemplateColumns }}
@@ -360,7 +352,6 @@ const AvailabilityGrid = ({
 
             {/* ---- PM Panel ---- */}
             <div className="overflow-x-auto">
-              {/* Column headers */}
               <div
                 className="grid gap-px mb-px"
                 style={{ gridTemplateColumns }}
@@ -375,8 +366,6 @@ const AvailabilityGrid = ({
                   </div>
                 ))}
               </div>
-
-              {/* PM rows: slots 24–47 (12:00 PM – 11:30 PM) */}
               <div
                 className="grid gap-px bg-border/60 rounded-lg overflow-hidden border border-border/60"
                 style={{ gridTemplateColumns }}

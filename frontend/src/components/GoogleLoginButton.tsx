@@ -16,7 +16,7 @@ export function GoogleLoginButton() {
     scope: "https://www.googleapis.com/auth/calendar.events",
     prompt: "consent",
     access_type: "offline",
-    include_granted_scopes: true,
+    include_granted_scopes: false,
     onSuccess: async (codeResponse) => {
       try {
         const res = await fetch(AUTH_GOOGLE_URL, {
